@@ -1,0 +1,342 @@
+services:
+  node-prod-base:
+    image: ruflo-node-prod:latest
+    build:
+      context: .
+      dockerfile: infra/docker/node-prod/Dockerfile
+    command: ["true"]
+
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+    ports:
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+    networks: [ruflo]
+
+  web:
+    image: ruflo-node-prod:latest
+    working_dir: /workspace
+    command: sh -c "npm run start -w @ruflo/web"
+    env_file: .env.example
+    environment:
+      NODE_ENV: production
+      API_INTERNAL_BASE_URL: http://api:3000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+    ports:
+      - "${WEB_PORT:-3001}:3001"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.web.rule=Host(`web.localhost`)
+      - traefik.http.routers.web.entrypoints=web
+    restart: unless-stopped
+    networks: [ruflo]
+
+  admin:
+    image: ruflo-node-prod:latest
+    working_dir: /workspace
+    command: sh -c "npm run start -w @ruflo/admin"
+    env_file: .env.example
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+      API_INTERNAL_BASE_URL: http://api:3000
+    ports:
+      - "${ADMIN_PORT:-3002}:3002"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.admin.rule=Host(`admin.localhost`)
+      - traefik.http.routers.admin.entrypoints=web
+    restart: unless-stopped
+    networks: [ruflo]
+
+  api:
+    image: ruflo-node-prod:latest
+    working_dir: /workspace
+    command: sh -c "npm run prisma:migrate:deploy && npm run start -w @ruflo/api"
+    env_file: .env.example
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-3000}:3000"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.api.rule=Host(`api.localhost`)
+      - traefik.http.routers.api.entrypoints=web
+    restart: unless-stopped
+    networks: [ruflo]
+
+  worker:
+    image: ruflo-node-prod:latest
+    working_dir: /workspace
+    command: sh -c "npm run start -w @ruflo/worker"
+    env_file: .env.example
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [ruflo]
+
+  ai-worker:
+    image: ruflo-node-prod:latest
+    working_dir: /workspace
+    command: sh -c "npm run start -w @ruflo/ai-worker"
+    env_file: .env.example
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [ruflo]
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ruflo}
+      POSTGRES_USER: ${POSTGRES_USER:-ruflo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - ./infra/data/postgres:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-ruflo} -d ${POSTGRES_DB:-ruflo}
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+    networks: [ruflo]
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - ./infra/data/redis:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [ruflo]
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-28T09-55-16Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-change-me}
+    volumes:
+      - ./infra/data/minio:/data
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - http://localhost:9000/minio/health/live
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [ruflo]
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.12
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-change-me}
+    volumes:
+      - ./infra/data/meilisearch:/meili_data
+    ports:
+      - "7700:7700"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - http://localhost:7700/health
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks: [ruflo]
+
+  keycloak:
+    image: ruflo-keycloak:latest
+    build:
+      context: .
+      dockerfile: infra/docker/keycloak/Dockerfile
+    command:
+      - start
+      - --optimized
+      - --http-port=8080
+      - --hostname=localhost
+      - --hostname-port=8080
+      - --hostname-strict=false
+      - --hostname-strict-https=false
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: "8080"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    ports:
+      - "${KEYCLOAK_PORT:-8080}:8080"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          /bin/bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 &&
+          grep -q "200" <&3'
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+    networks: [ruflo]
+
+  keycloak-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - ./infra/data/keycloak-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U keycloak -d keycloak
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+    networks: [ruflo]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infra/observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    restart: unless-stopped
+    networks: [ruflo]
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    volumes:
+      - ./infra/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    restart: unless-stopped
+    networks: [ruflo]
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: change-me
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "${GRAFANA_PORT:-3003}:3000"
+    restart: unless-stopped
+    networks: [ruflo]
+
+  loki:
+    image: grafana/loki:3.3.2
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./infra/observability/loki.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    restart: unless-stopped
+    networks: [ruflo]
+
+  promtail:
+    image: grafana/promtail:3.3.2
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./infra/observability/promtail.yaml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks: [ruflo]
+
+  tempo:
+    image: grafana/tempo:2.7.1
+    user: "0:0"
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./infra/observability/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"
+    restart: unless-stopped
+    networks: [ruflo]
+
+networks:
+  ruflo:
+    driver: bridge
+
+volumes:
+  grafana-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:

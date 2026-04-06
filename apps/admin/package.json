@@ -1,0 +1,21 @@
+{
+  "name": "@ruflo/admin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev -p 3002",
+    "start": "next start -p 3002",
+    "lint": "echo \"lint not configured yet\"",
+    "test": "echo \"tests not configured yet\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ruflo/contracts": "0.1.0",
+    "@ruflo/ui": "0.1.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

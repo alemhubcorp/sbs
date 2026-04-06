@@ -1,0 +1,30 @@
+{
+  "name": "@ruflo/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "echo \"lint not configured yet\"",
+    "test": "echo \"tests not configured yet\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.3",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.3",
+    "@nestjs/platform-fastify": "^11.0.3",
+    "@ruflo/config": "0.1.0",
+    "@ruflo/contracts": "0.1.0",
+    "@ruflo/database": "0.1.0",
+    "@ruflo/domain": "0.1.0",
+    "@ruflo/sql": "0.1.0",
+    "bullmq": "^5.34.10",
+    "ioredis": "^5.4.2",
+    "jose": "^6.2.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  }
+}

@@ -1,0 +1,796 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  status    TenantStatus @default(active)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizations Organization[]
+  orgUnits      OrgUnit[]
+  memberships   Membership[]
+  sellerProfiles SellerProfile[]
+  buyerProfiles  BuyerProfile[]
+  wholesaleRfqs  WholesaleRfq[]
+  wholesaleDeals WholesaleDeal[]
+  documents      Document[]
+}
+
+model Organization {
+  id         String   @id @default(cuid())
+  tenantId   String
+  name       String
+  legalName  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orgUnits    OrgUnit[]
+  memberships Membership[]
+
+  @@index([tenantId])
+}
+
+model OrgUnit {
+  id             String   @id @default(cuid())
+  tenantId       String
+  organizationId String
+  parentId       String?
+  name           String
+  code           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       OrgUnit?     @relation("OrgUnitHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     OrgUnit[]    @relation("OrgUnitHierarchy")
+  memberships  Membership[]
+
+  @@index([tenantId])
+  @@index([organizationId])
+  @@index([parentId])
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  firstName       String
+  lastName        String
+  status          UserStatus @default(invited)
+  externalSubject String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  userRoles    UserRole[]
+  memberships  Membership[]
+  sellerProfiles SellerProfile[]
+  buyerProfiles  BuyerProfile[]
+  requestedRfqs WholesaleRfq[] @relation("RfqRequestedByUser")
+  contractVersions ContractVersion[]
+  documents        Document[]
+  requestedApprovals Approval[]      @relation("ApprovalRequestedBy")
+  decidedApprovals   Approval[]      @relation("ApprovalDecidedBy")
+}
+
+model SellerProfile {
+  id          String      @id @default(cuid())
+  userId      String?
+  tenantId    String?
+  sellerType  SellerType
+  displayName String
+  status      ProfileStatus @default(active)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  products Product[]
+  wholesaleQuotes WholesaleQuote[]
+  wholesaleDeals  WholesaleDeal[]
+
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model BuyerProfile {
+  id          String      @id @default(cuid())
+  userId      String?
+  tenantId    String?
+  buyerType   BuyerType
+  displayName String
+  status      ProfileStatus @default(active)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  retailOrders RetailOrder[]
+  wholesaleRfqs WholesaleRfq[]
+  wholesaleDeals WholesaleDeal[]
+
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  parentId    String?
+  slug        String    @unique
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id              String        @id @default(cuid())
+  sellerProfileId String
+  categoryId      String
+  slug            String        @unique
+  sku             String        @unique
+  name            String
+  description     String?
+  status          ProductStatus @default(draft)
+  targetMarket    ProductTargetMarket @default(both)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  sellerProfile SellerProfile @relation(fields: [sellerProfileId], references: [id], onDelete: Restrict)
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  prices        ProductPrice[]
+  orderItems    RetailOrderItem[]
+
+  @@index([sellerProfileId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model ProductPrice {
+  id          String   @id @default(cuid())
+  productId   String
+  currency    String
+  amountMinor Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model RetailOrder {
+  id               String      @id @default(cuid())
+  buyerProfileId   String
+  status           RetailOrderStatus @default(created)
+  currency         String
+  totalAmountMinor Int
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  buyerProfile BuyerProfile     @relation(fields: [buyerProfileId], references: [id], onDelete: Restrict)
+  items        RetailOrderItem[]
+
+  @@index([buyerProfileId])
+  @@index([status])
+}
+
+model RetailOrderItem {
+  id               String   @id @default(cuid())
+  retailOrderId    String
+  productId        String
+  quantity         Int
+  unitAmountMinor  Int
+  lineAmountMinor  Int
+  currency         String
+  productName      String
+  productSlug      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  retailOrder RetailOrder @relation(fields: [retailOrderId], references: [id], onDelete: Cascade)
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([retailOrderId])
+  @@index([productId])
+}
+
+model WholesaleRfq {
+  id                String              @id @default(cuid())
+  tenantId          String
+  buyerProfileId    String?
+  requestedByUserId String?
+  title             String
+  description       String?
+  currency          String
+  status            WholesaleRfqStatus  @default(open)
+  selectedQuoteId   String?             @unique
+  contractId        String?
+  documentLinkage   Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  buyerProfile      BuyerProfile?       @relation(fields: [buyerProfileId], references: [id], onDelete: SetNull)
+  requestedByUser   User?               @relation("RfqRequestedByUser", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  quotes            WholesaleQuote[]
+  selectedQuote     WholesaleQuote?     @relation("SelectedQuoteForRfq", fields: [selectedQuoteId], references: [id], onDelete: SetNull)
+  deal              WholesaleDeal?
+
+  @@index([tenantId])
+  @@index([buyerProfileId])
+  @@index([requestedByUserId])
+  @@index([status])
+}
+
+model WholesaleQuote {
+  id             String               @id @default(cuid())
+  rfqId          String
+  sellerProfileId String
+  amountMinor    Int
+  currency       String
+  message        String?
+  status         WholesaleQuoteStatus @default(submitted)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  rfq            WholesaleRfq         @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  sellerProfile  SellerProfile        @relation(fields: [sellerProfileId], references: [id], onDelete: Restrict)
+  acceptedForRfq WholesaleRfq?        @relation("SelectedQuoteForRfq")
+  deal           WholesaleDeal?
+
+  @@index([rfqId])
+  @@index([sellerProfileId])
+  @@index([status])
+}
+
+model WholesaleDeal {
+  id             String              @id @default(cuid())
+  rfqId          String              @unique
+  acceptedQuoteId String             @unique
+  tenantId       String
+  buyerProfileId String?
+  sellerProfileId String
+  title          String
+  status         WholesaleDealStatus @default(open)
+  contractId     String?
+  documentLinkage Json?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  rfq            WholesaleRfq        @relation(fields: [rfqId], references: [id], onDelete: Restrict)
+  acceptedQuote  WholesaleQuote      @relation(fields: [acceptedQuoteId], references: [id], onDelete: Restrict)
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  buyerProfile   BuyerProfile?       @relation(fields: [buyerProfileId], references: [id], onDelete: SetNull)
+  sellerProfile  SellerProfile       @relation(fields: [sellerProfileId], references: [id], onDelete: Restrict)
+  dealRoom       DealRoom?
+  contract       Contract?
+  documentLinks  DocumentLink[]
+  paymentTransactions PaymentTransaction[]
+  disputes       DisputeCase[]
+  logisticsSelection DealLogisticsSelection?
+
+  @@index([tenantId])
+  @@index([buyerProfileId])
+  @@index([sellerProfileId])
+  @@index([status])
+}
+
+model DealRoom {
+  id              String             @id @default(cuid())
+  dealId          String             @unique
+  status          DealRoomStatus     @default(active)
+  latestMessage   String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  deal            WholesaleDeal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Contract {
+  id             String          @id @default(cuid())
+  dealId         String          @unique
+  contractType   ContractType
+  status         ContractStatus  @default(draft)
+  title          String
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  deal           WholesaleDeal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  versions       ContractVersion[]
+  documentLinks  DocumentLink[]
+
+  @@index([status])
+  @@index([contractType])
+}
+
+model ContractVersion {
+  id             String         @id @default(cuid())
+  contractId     String
+  versionNumber  Int
+  label          String?
+  storageBucket  String?
+  storageKey     String?
+  createdByUserId String?
+  createdAt      DateTime       @default(now())
+
+  contract       Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdByUser  User?          @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([contractId, versionNumber])
+  @@index([createdByUserId])
+}
+
+model Document {
+  id             String          @id @default(cuid())
+  tenantId       String?
+  uploadedByUserId String?
+  documentType   DocumentType
+  status         DocumentStatus  @default(uploaded)
+  name           String
+  contentType    String?
+  storageBucket  String?
+  storageKey     String?
+  sizeBytes      Int?
+  checksum       String?
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  tenant         Tenant?         @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  uploadedByUser User?           @relation(fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  links          DocumentLink[]
+
+  @@index([tenantId])
+  @@index([uploadedByUserId])
+  @@index([documentType])
+  @@index([status])
+}
+
+model DocumentLink {
+  id             String            @id @default(cuid())
+  documentId     String
+  dealId         String?
+  contractId     String?
+  linkType       DocumentLinkType
+  createdAt      DateTime          @default(now())
+
+  document       Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  deal           WholesaleDeal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  contract       Contract?         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([dealId])
+  @@index([contractId])
+  @@index([linkType])
+}
+
+model PaymentTransaction {
+  id                 String                   @id
+  dealId             String
+  transactionType    PaymentTransactionType
+  status             PaymentTransactionStatus @default(created)
+  currency           String
+  totalAmountMinor   Int
+  heldAmountMinor    Int                      @default(0)
+  releasedAmountMinor Int                     @default(0)
+  refundedAmountMinor Int                     @default(0)
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+
+  deal               WholesaleDeal            @relation(fields: [dealId], references: [id], onDelete: Restrict)
+  ledgerEntries      PaymentLedgerEntry[]
+  disputes           DisputeCase[]
+
+  @@index([dealId])
+  @@index([status])
+}
+
+model PaymentLedgerEntry {
+  id                   String            @id
+  paymentTransactionId String
+  entryType            PaymentLedgerEntryType
+  amountMinor          Int
+  resultingHeldMinor   Int
+  resultingReleasedMinor Int
+  resultingRefundedMinor Int
+  note                 String?
+  createdAt            DateTime          @default(now())
+
+  paymentTransaction   PaymentTransaction @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
+
+  @@index([paymentTransactionId])
+  @@index([entryType])
+  @@index([createdAt])
+}
+
+model DisputeCase {
+  id                   String            @id @default(cuid())
+  dealId               String?
+  paymentTransactionId String?
+  disputeType          DisputeType
+  status               DisputeStatus     @default(open)
+  reason               String
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  deal                 WholesaleDeal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([dealId])
+  @@index([paymentTransactionId])
+  @@index([status])
+}
+
+model LogisticsProvider {
+  id             String                  @id @default(cuid())
+  name           String
+  status         LogisticsProviderStatus @default(draft)
+  contactEmail   String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  capabilityProfile LogisticsCapabilityProfile?
+  dealSelections     DealLogisticsSelection[]
+
+  @@index([status])
+}
+
+model LogisticsCapabilityProfile {
+  id                 String              @id @default(cuid())
+  providerId         String              @unique
+  transportTypes     Json?
+  serviceTypes       Json?
+  cargoCategories    Json?
+  supportedRegions   Json?
+  deliveryModes      Json?
+  additionalServices Json?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  provider           LogisticsProvider   @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+model DealLogisticsSelection {
+  id                 String                        @id @default(cuid())
+  dealId             String                        @unique
+  logisticsProviderId String
+  status             DealLogisticsSelectionStatus  @default(selected)
+  notes              String?
+  createdAt          DateTime                      @default(now())
+  updatedAt          DateTime                      @updatedAt
+
+  deal               WholesaleDeal                 @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  logisticsProvider  LogisticsProvider             @relation(fields: [logisticsProviderId], references: [id], onDelete: Restrict)
+
+  @@index([logisticsProviderId])
+  @@index([status])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userRoles        UserRole[]
+  rolePermissions  RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  tenantId       String
+  userId         String
+  organizationId String?
+  orgUnitId      String?
+  membershipType MembershipType @default(member)
+  status         MembershipStatus @default(active)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  orgUnit      OrgUnit?      @relation(fields: [orgUnitId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, userId, organizationId, orgUnitId])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([orgUnitId])
+}
+
+model AuditEvent {
+  id            String   @id @default(cuid())
+  module        String
+  eventType     String
+  tenantId      String?
+  correlationId String?
+  actorId       String?
+  subjectType   String?
+  subjectId     String?
+  payload       Json
+  createdAt     DateTime @default(now())
+
+  @@index([module])
+  @@index([tenantId])
+  @@index([subjectType, subjectId])
+  @@index([createdAt])
+}
+
+model Approval {
+  id                String         @id @default(cuid())
+  module            String
+  approvalType      String
+  status            ApprovalStatus @default(pending)
+  tenantId          String?
+  subjectType       String
+  subjectId         String
+  requestedByUserId String?
+  decidedByUserId   String?
+  requiredRoleCode  String?
+  reason            String?
+  payload           Json
+  decisionComment   String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  decidedAt         DateTime?
+
+  requestedByUser   User?          @relation("ApprovalRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  decidedByUser     User?          @relation("ApprovalDecidedBy", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([module])
+  @@index([tenantId])
+  @@index([subjectType, subjectId])
+  @@index([createdAt])
+}
+
+model OutboxMessage {
+  id            String   @id @default(cuid())
+  topic         String
+  payload       Json
+  status        String   @default("pending")
+  availableAt   DateTime @default(now())
+  processedAt   DateTime?
+  correlationId String?
+  createdAt     DateTime @default(now())
+}
+
+model InboxMessage {
+  id             String   @id @default(cuid())
+  provider       String
+  externalId     String
+  payload        Json
+  status         String   @default("received")
+  processedAt    DateTime?
+  correlationId  String?
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, externalId])
+}
+
+enum TenantStatus {
+  active
+  suspended
+}
+
+enum UserStatus {
+  invited
+  active
+  disabled
+}
+
+enum MembershipStatus {
+  active
+  invited
+  suspended
+}
+
+enum MembershipType {
+  owner
+  admin
+  member
+  viewer
+}
+
+enum SellerType {
+  individual
+  business
+}
+
+enum BuyerType {
+  consumer
+  business
+}
+
+enum ProfileStatus {
+  active
+  suspended
+}
+
+enum ProductStatus {
+  draft
+  published
+  archived
+}
+
+enum ProductTargetMarket {
+  b2c
+  b2b
+  both
+}
+
+enum RetailOrderStatus {
+  created
+  paid
+  fulfilled
+  cancelled
+}
+
+enum WholesaleRfqStatus {
+  open
+  quoted
+  closed
+}
+
+enum WholesaleQuoteStatus {
+  submitted
+  accepted
+  rejected
+}
+
+enum WholesaleDealStatus {
+  open
+  contract_pending
+  in_room
+  closed
+}
+
+enum DealRoomStatus {
+  active
+  closed
+}
+
+enum ContractType {
+  master_purchase
+  supply_agreement
+  annex
+  custom
+}
+
+enum ContractStatus {
+  draft
+  active
+  archived
+}
+
+enum DocumentType {
+  contract
+  attachment
+  evidence
+  commercial
+  compliance
+  other
+}
+
+enum DocumentStatus {
+  uploaded
+  linked
+  approved
+  rejected
+}
+
+enum DocumentLinkType {
+  deal_attachment
+  contract_attachment
+  supporting_evidence
+}
+
+enum PaymentTransactionType {
+  wholesale_deal
+}
+
+enum PaymentTransactionStatus {
+  created
+  held
+  partially_released
+  released
+  refunded
+  disputed
+  cancelled
+}
+
+enum PaymentLedgerEntryType {
+  created
+  hold
+  release
+  refund
+  dispute
+}
+
+enum DisputeType {
+  payment
+  document
+  commercial
+}
+
+enum DisputeStatus {
+  open
+  under_review
+  resolved
+  rejected
+}
+
+enum LogisticsProviderStatus {
+  draft
+  active
+  suspended
+}
+
+enum DealLogisticsSelectionStatus {
+  selected
+  changed
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
