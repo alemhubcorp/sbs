@@ -23,6 +23,7 @@ model Tenant {
   wholesaleRfqs  WholesaleRfq[]
   wholesaleDeals WholesaleDeal[]
   documents      Document[]
+  operationalAssignments OperationalAssignment[]
 }
 
 model Organization {
@@ -30,14 +31,34 @@ model Organization {
   tenantId   String
   name       String
   legalName  String?
+  partnerType PartnerType?
+  status     OrganizationStatus @default(active)
+  onboardingStatus String @default("draft")
+  contactName String?
+  contactEmail String?
+  contactPhone String?
+  address    String?
+  country    String?
+  notes      String?
+  socialLinks Json?
+  linkedUserId String?
+  submittedAt DateTime?
+  reviewedAt DateTime?
+  reviewedByUserId String?
+  reviewNote String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  linkedUser  User?        @relation("OrganizationLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
   orgUnits    OrgUnit[]
   memberships Membership[]
+  operationalAssignments OperationalAssignment[]
 
   @@index([tenantId])
+  @@index([partnerType])
+  @@index([status])
+  @@index([linkedUserId])
 }
 
 model OrgUnit {
@@ -75,11 +96,14 @@ model User {
   memberships  Membership[]
   sellerProfiles SellerProfile[]
   buyerProfiles  BuyerProfile[]
+  linkedOrganizations Organization[] @relation("OrganizationLinkedUser")
   requestedRfqs WholesaleRfq[] @relation("RfqRequestedByUser")
   contractVersions ContractVersion[]
   documents        Document[]
+  notifications    Notification[]
   requestedApprovals Approval[]      @relation("ApprovalRequestedBy")
   decidedApprovals   Approval[]      @relation("ApprovalDecidedBy")
+  operationalAssignments OperationalAssignment[]
 }
 
 model SellerProfile {
@@ -87,14 +111,37 @@ model SellerProfile {
   userId      String?
   tenantId    String?
   sellerType  SellerType
+  supplierType SupplierType @default(trader)
   displayName String
+  companyName String?
+  companyAddress String?
+  contactPerson String?
+  contactEmail String?
+  contactPhone String?
+  socialLinks Json?
+  country     String?
   status      ProfileStatus @default(active)
+  onboardingStatus String @default("draft")
+  submittedAt DateTime?
+  reviewedAt DateTime?
+  reviewedByUserId String?
+  reviewNote String?
+  payoutBeneficiaryName String?
+  payoutCompanyName     String?
+  payoutBankName        String?
+  payoutAccountNumber   String?
+  payoutIban            String?
+  payoutSwiftBic        String?
+  payoutStatus          String        @default("unverified")
+  payoutReviewNote      String?
+  payoutVerifiedAt      DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
   user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   products Product[]
+  retailOrders RetailOrder[]
   wholesaleQuotes WholesaleQuote[]
   wholesaleDeals  WholesaleDeal[]
 
@@ -108,7 +155,20 @@ model BuyerProfile {
   tenantId    String?
   buyerType   BuyerType
   displayName String
+  personalAddress String?
+  contactPerson String?
+  contactEmail String?
+  contactPhone String?
+  companyName String?
+  legalName String?
+  companyAddress String?
+  socialLinks Json?
   status      ProfileStatus @default(active)
+  b2bStatus String @default("not_requested")
+  b2bSubmittedAt DateTime?
+  b2bReviewedAt DateTime?
+  b2bReviewedByUserId String?
+  b2bReviewNote String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -178,17 +238,25 @@ model ProductPrice {
 model RetailOrder {
   id               String      @id @default(cuid())
   buyerProfileId   String
+  supplierProfileId String?
   status           RetailOrderStatus @default(created)
+  paymentStatus    RetailPaymentStatus @default(pending)
+  paymentTransactionId String? @unique
+  shippingAddress  Json?
   currency         String
   totalAmountMinor Int
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
 
   buyerProfile BuyerProfile     @relation(fields: [buyerProfileId], references: [id], onDelete: Restrict)
+  supplierProfile SellerProfile? @relation(fields: [supplierProfileId], references: [id], onDelete: SetNull)
   items        RetailOrderItem[]
+  paymentRecords PaymentRecord[]
 
   @@index([buyerProfileId])
+  @@index([supplierProfileId])
   @@index([status])
+  @@index([paymentStatus])
 }
 
 model RetailOrderItem {
@@ -269,6 +337,7 @@ model WholesaleDeal {
   sellerProfileId String
   title          String
   status         WholesaleDealStatus @default(open)
+  agreementSnapshot Json?
   contractId     String?
   documentLinkage Json?
   createdAt      DateTime            @default(now())
@@ -321,6 +390,67 @@ model Contract {
 
   @@index([status])
   @@index([contractType])
+}
+
+model ContractRfq {
+  id        String            @id @default(uuid())
+  productId String
+  qty       Int
+  buyerUserId String?
+  supplierUserId String?
+  status    ContractRfqStatus @default(new)
+  createdAt DateTime          @default(now())
+
+  quotes    ContractRfqQuote[]
+  deal      ContractRfqDeal?
+
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@index([buyerUserId])
+  @@index([supplierUserId])
+}
+
+model ContractRfqQuote {
+  id         String                 @id @default(uuid())
+  rfqId      String                 @unique
+  buyerUserId String?
+  supplierUserId String?
+  unitPrice  Int
+  totalPrice Int
+  currency   String
+  note       String?
+  status     ContractRfqQuoteStatus @default(submitted)
+  createdAt  DateTime               @default(now())
+
+  rfq        ContractRfq            @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  deal       ContractRfqDeal?
+
+  @@index([createdAt(sort: Desc)])
+  @@index([status])
+  @@index([buyerUserId])
+  @@index([supplierUserId])
+}
+
+model ContractRfqDeal {
+  id             String                  @id @default(uuid())
+  rfqId          String                  @unique
+  quoteId        String                  @unique
+  buyerUserId    String?
+  supplierUserId String?
+  buyerStatus    ContractDealPartyStatus @default(pending)
+  supplierStatus ContractDealPartyStatus @default(pending)
+  dealStatus     ContractDealStatus      @default(pending)
+  agreementSnapshot Json?
+  createdAt      DateTime                @default(now())
+
+  rfq            ContractRfq             @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  quote          ContractRfqQuote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  paymentRecords PaymentRecord[]
+
+  @@index([createdAt(sort: Desc)])
+  @@index([dealStatus])
+  @@index([buyerUserId])
+  @@index([supplierUserId])
 }
 
 model ContractVersion {
@@ -423,6 +553,61 @@ model PaymentLedgerEntry {
   @@index([createdAt])
 }
 
+model PaymentRecord {
+  id               String               @id @default(cuid())
+  scope            PaymentScope
+  orderId          String?
+  dealId           String?
+  amountMinor      Int
+  currency         String
+  method           PaymentMethod
+  provider         PaymentProvider
+  status           PaymentRecordStatus   @default(pending)
+  externalId       String?
+  transactionId    String?              @unique
+  bankReference    String?
+  paymentReference String?              @unique
+  instructions     Json?
+  metadata         Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  retailOrder      RetailOrder?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  deal             ContractRfqDeal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  attempts         PaymentAttempt[]
+
+  @@index([orderId])
+  @@index([dealId])
+  @@index([scope])
+  @@index([status])
+  @@index([provider])
+}
+
+model PaymentAttempt {
+  id               String               @id @default(cuid())
+  paymentRecordId  String
+  attemptType      PaymentAttemptType
+  method           PaymentMethod
+  provider         PaymentProvider
+  status           PaymentRecordStatus
+  amountMinor      Int
+  currency         String
+  externalId       String?
+  transactionId    String?
+  bankReference    String?
+  paymentReference String?
+  note             String?
+  payload          Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  paymentRecord    PaymentRecord        @relation(fields: [paymentRecordId], references: [id], onDelete: Cascade)
+
+  @@index([paymentRecordId])
+  @@index([attemptType])
+  @@index([status])
+}
+
 model DisputeCase {
   id                   String            @id @default(cuid())
   dealId               String?
@@ -483,6 +668,33 @@ model DealLogisticsSelection {
   logisticsProvider  LogisticsProvider             @relation(fields: [logisticsProviderId], references: [id], onDelete: Restrict)
 
   @@index([logisticsProviderId])
+  @@index([status])
+}
+
+model OperationalAssignment {
+  id                    String                     @id @default(cuid())
+  tenantId              String
+  kind                  OperationalAssignmentKind
+  subjectType           String
+  subjectId             String
+  partnerOrganizationId String?
+  partnerUserId         String?
+  reference             String?
+  status                String
+  notes                 String?
+  metadata              Json?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+
+  tenant                Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  partnerOrganization   Organization?              @relation(fields: [partnerOrganizationId], references: [id], onDelete: SetNull)
+  partnerUser           User?                      @relation(fields: [partnerUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([kind])
+  @@index([subjectType, subjectId])
+  @@index([partnerOrganizationId])
+  @@index([partnerUserId])
   @@index([status])
 }
 
@@ -572,6 +784,58 @@ model AuditEvent {
   @@index([tenantId])
   @@index([subjectType, subjectId])
   @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actor      String
+  actorId    String?
+  metadata   Json
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([actor])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String
+  title      String
+  message    String
+  read       Boolean  @default(false)
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([type])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model AdminSetting {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  section       String
+  value         Json
+  updatedByUserId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([section])
+  @@index([updatedAt])
 }
 
 model Approval {
@@ -679,9 +943,65 @@ enum ProductTargetMarket {
 
 enum RetailOrderStatus {
   created
+  pending
   paid
+  shipped
+  delivered
   fulfilled
   cancelled
+}
+
+enum RetailPaymentStatus {
+  pending
+  awaiting_transfer
+  awaiting_confirmation
+  paid
+  failed
+  cancelled
+  refunded
+}
+
+enum PaymentScope {
+  order
+  deal
+}
+
+enum PaymentMethod {
+  card
+  qr
+  bank_transfer
+  swift
+  iban_invoice
+  manual
+}
+
+enum PaymentProvider {
+  internal_manual
+  airwallex
+  none
+}
+
+enum PaymentRecordStatus {
+  invoice_issued
+  pending
+  processing
+  authorized
+  awaiting_transfer
+  awaiting_confirmation
+  paid
+  failed
+  cancelled
+  refunded
+  requires_review
+  mismatch_detected
+}
+
+enum PaymentAttemptType {
+  initiate
+  confirm
+  reconcile
+  webhook
+  manual
 }
 
 enum WholesaleRfqStatus {
@@ -719,6 +1039,39 @@ enum ContractStatus {
   draft
   active
   archived
+}
+
+enum ContractRfqStatus {
+  new
+  quoted
+  accepted
+  rejected
+}
+
+enum ContractRfqQuoteStatus {
+  submitted
+  accepted
+  rejected
+}
+
+enum ContractDealPartyStatus {
+  pending
+  accepted
+  rejected
+  active
+  completed
+  disputed
+}
+
+enum ContractDealStatus {
+  pending
+  quoted
+  accepted
+  rejected
+  in_escrow
+  shipped
+  completed
+  disputed
 }
 
 enum DocumentType {
@@ -784,6 +1137,29 @@ enum LogisticsProviderStatus {
   suspended
 }
 
+enum OrganizationStatus {
+  active
+  inactive
+}
+
+enum PartnerType {
+  logistics_company
+  customs_broker
+  insurance_company
+  surveyor
+  bank
+}
+
+enum SupplierType {
+  trader
+  manufacturer
+}
+
+enum OperationalAssignmentKind {
+  shipment
+  customs
+}
+
 enum DealLogisticsSelectionStatus {
   selected
   changed
@@ -793,4 +1169,5 @@ enum ApprovalStatus {
   pending
   approved
   rejected
+  needs_more_info
 }

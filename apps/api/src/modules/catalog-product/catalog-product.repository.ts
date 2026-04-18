@@ -7,6 +7,19 @@ export interface CreateSellerProfileInput {
   tenantId?: string | undefined;
   sellerType: 'individual' | 'business';
   displayName: string;
+  companyName?: string | undefined;
+  country?: string | undefined;
+}
+
+export interface UpdateSellerPayoutSettingsInput {
+  payoutBeneficiaryName: string;
+  payoutCompanyName: string;
+  payoutBankName: string;
+  payoutAccountNumber: string;
+  payoutIban: string;
+  payoutSwiftBic: string;
+  payoutStatus?: string | undefined;
+  payoutReviewNote?: string | undefined;
 }
 
 export interface CreateBuyerProfileInput {
@@ -99,6 +112,48 @@ export class CatalogProductRepository {
     });
   }
 
+  async getSellerProfileByUserId(userId: string) {
+    const sellerProfile = await this.prismaService.client.sellerProfile.findFirst({
+      where: { userId },
+      include: {
+        user: true,
+        tenant: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    if (!sellerProfile) {
+      throw new NotFoundException(`Seller profile for user ${userId} was not found.`);
+    }
+
+    return sellerProfile;
+  }
+
+  async updateSellerProfilePayoutSettings(userId: string, input: UpdateSellerPayoutSettingsInput) {
+    const sellerProfile = await this.getSellerProfileByUserId(userId);
+
+    return this.prismaService.client.sellerProfile.update({
+      where: { id: sellerProfile.id },
+      data: {
+        payoutBeneficiaryName: input.payoutBeneficiaryName,
+        payoutCompanyName: input.payoutCompanyName,
+        payoutBankName: input.payoutBankName,
+        payoutAccountNumber: input.payoutAccountNumber,
+        payoutIban: input.payoutIban,
+        payoutSwiftBic: input.payoutSwiftBic,
+        payoutStatus: input.payoutStatus ?? 'pending_review',
+        payoutReviewNote: input.payoutReviewNote ?? null,
+        payoutVerifiedAt: null
+      },
+      include: {
+        user: true,
+        tenant: true
+      }
+    });
+  }
+
   async createSellerProfile(input: CreateSellerProfileInput) {
     await this.ensureUserAndTenant(input.userId, input.tenantId);
 
@@ -106,6 +161,8 @@ export class CatalogProductRepository {
       data: {
         sellerType: input.sellerType,
         displayName: input.displayName,
+        ...(input.companyName ? { companyName: input.companyName } : {}),
+        ...(input.country ? { country: input.country } : {}),
         ...(input.userId ? { userId: input.userId } : {}),
         ...(input.tenantId ? { tenantId: input.tenantId } : {})
       },

@@ -122,6 +122,7 @@ export class LogisticsCoreService {
   ) {
     await this.resourceAccessService.ensureDealAccess(authContext, dealId);
     const parsed = selectProviderSchema.parse(input);
+    await this.logisticsCoreRepository.getProviderById(parsed.logisticsProviderId);
     const approvalRule = this.approvalPolicyService.getRule('logistics.deal.selection');
 
     if (!options.skipApproval && approvalRule?.enabled) {

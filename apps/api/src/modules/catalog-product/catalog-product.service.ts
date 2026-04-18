@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import type { RequestAuditContext } from '../../app/auth-context.js';
+import type { AuthContext, RequestAuditContext } from '../../app/auth-context.js';
 import { AuditService } from '../audit-observability/audit.service.js';
+import { ComplianceCoreService } from '../compliance-core/compliance-core.service.js';
 import { CatalogProductRepository } from './catalog-product.repository.js';
 
 const createCategorySchema = z.object({
@@ -15,7 +16,9 @@ const createSellerProfileSchema = z.object({
   userId: z.string().min(1).optional(),
   tenantId: z.string().min(1).optional(),
   sellerType: z.enum(['individual', 'business']),
-  displayName: z.string().min(1).max(120)
+  displayName: z.string().min(1).max(120),
+  companyName: z.string().min(1).max(160).optional(),
+  country: z.string().min(2).max(80).optional()
 });
 
 const createBuyerProfileSchema = z.object({
@@ -23,6 +26,15 @@ const createBuyerProfileSchema = z.object({
   tenantId: z.string().min(1).optional(),
   buyerType: z.enum(['consumer', 'business']),
   displayName: z.string().min(1).max(120)
+});
+
+const updateSellerPayoutSettingsSchema = z.object({
+  payoutBeneficiaryName: z.string().min(1).max(160),
+  payoutCompanyName: z.string().min(1).max(160),
+  payoutBankName: z.string().min(1).max(160),
+  payoutAccountNumber: z.string().min(1).max(80),
+  payoutIban: z.string().min(1).max(80),
+  payoutSwiftBic: z.string().min(1).max(32)
 });
 
 const createProductSchema = z.object({
@@ -42,7 +54,8 @@ const createProductSchema = z.object({
 export class CatalogProductService {
   constructor(
     @Inject(CatalogProductRepository) private readonly catalogProductRepository: CatalogProductRepository,
-    @Inject(AuditService) private readonly auditService: AuditService
+    @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(ComplianceCoreService) private readonly complianceCoreService: ComplianceCoreService
   ) {}
 
   listCategories() {
@@ -71,6 +84,36 @@ export class CatalogProductService {
 
   listSellerProfiles() {
     return this.catalogProductRepository.listSellerProfiles();
+  }
+
+  getCurrentSellerProfile(authContext: AuthContext) {
+    this.ensureAuthenticatedSupplier(authContext);
+    return this.catalogProductRepository.getSellerProfileByUserId(authContext.internalUserId!);
+  }
+
+  async updateCurrentSellerPayoutSettings(input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
+    this.ensureAuthenticatedSupplier(authContext);
+    const sellerProfile = await this.catalogProductRepository.updateSellerProfilePayoutSettings(
+      authContext.internalUserId!,
+      updateSellerPayoutSettingsSchema.parse(input)
+    );
+
+    await this.auditService.record({
+      module: 'catalog-product',
+      eventType: 'catalog.seller-profile.payout-settings.updated',
+      actorId: auditContext.actorId,
+      tenantId: sellerProfile.tenantId ?? auditContext.tenantId,
+      correlationId: auditContext.correlationId,
+      subjectType: 'seller-profile',
+      subjectId: sellerProfile.id,
+      payload: {
+        payoutStatus: sellerProfile.payoutStatus,
+        payoutBankName: sellerProfile.payoutBankName,
+        payoutIban: sellerProfile.payoutIban
+      }
+    });
+
+    return sellerProfile;
   }
 
   async createSellerProfile(input: unknown, auditContext: RequestAuditContext) {
@@ -119,6 +162,16 @@ export class CatalogProductService {
     return buyerProfile;
   }
 
+  private ensureAuthenticatedSupplier(authContext: AuthContext) {
+    if (!authContext?.isAuthenticated || !authContext.internalUserId) {
+      throw new ForbiddenException('Authenticated supplier required.');
+    }
+
+    if (!authContext.roles.includes('supplier_user') && !authContext.roles.includes('platform_admin')) {
+      throw new ForbiddenException('Supplier access required.');
+    }
+  }
+
   listProducts() {
     return this.catalogProductRepository.listProducts(true);
   }
@@ -128,6 +181,25 @@ export class CatalogProductService {
   }
 
   async createProduct(input: unknown, auditContext: RequestAuditContext) {
+    if (!auditContext.roles.includes('platform_admin') && !auditContext.roles.includes('supplier_user')) {
+      throw new ForbiddenException('Supplier access required.');
+    }
+
+    if (!auditContext.roles.includes('platform_admin')) {
+      await this.complianceCoreService.requireSupplierApproval({
+        isAuthenticated: true,
+        subject: auditContext.actorId,
+        email: null,
+        username: null,
+        internalUserId: auditContext.actorId,
+        tenantId: auditContext.tenantId,
+        tenantIds: auditContext.tenantId ? [auditContext.tenantId] : [],
+        roles: auditContext.roles,
+        permissions: [],
+        tokenIssuer: null
+      });
+    }
+
     const product = await this.catalogProductRepository.createProduct(createProductSchema.parse(input));
 
     await this.auditService.record({

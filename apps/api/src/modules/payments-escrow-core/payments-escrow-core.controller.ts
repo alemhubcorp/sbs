@@ -63,4 +63,15 @@ export class PaymentsEscrowCoreController {
   ) {
     return this.paymentsEscrowCoreService.refundFunds(id, body, extractRequestAuditContext(request), authContext!);
   }
+
+  @Post('transactions/:id/payout-failed')
+  @RequirePermissions('payment.manage')
+  markPayoutFailed(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: ApiRequestLike,
+    @CurrentAuthContext() authContext: ApiRequestLike['authContext']
+  ) {
+    return this.paymentsEscrowCoreService.markPayoutFailed(id, body, extractRequestAuditContext(request), authContext!);
+  }
 }

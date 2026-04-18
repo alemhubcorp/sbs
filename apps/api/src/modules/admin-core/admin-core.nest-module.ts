@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditObservabilityNestModule } from '../audit-observability/audit-observability.nest-module.js';
+import { ComplianceCoreNestModule } from '../compliance-core/compliance-core.nest-module.js';
 import { ContractCoreNestModule } from '../contract-core/contract-core.nest-module.js';
 import { LogisticsCoreNestModule } from '../logistics-core/logistics-core.nest-module.js';
 import { PaymentsEscrowCoreNestModule } from '../payments-escrow-core/payments-escrow-core.nest-module.js';
@@ -10,6 +11,7 @@ import { AdminCoreService } from './admin-core.service.js';
 @Module({
   imports: [
     AuditObservabilityNestModule,
+    ComplianceCoreNestModule,
     WholesaleCoreNestModule,
     ContractCoreNestModule,
     PaymentsEscrowCoreNestModule,

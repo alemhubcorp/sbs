@@ -9,8 +9,6 @@ RUN apt-get update -y \
 
 WORKDIR /workspace
 
-ENV NODE_ENV=production
-
 COPY package.json package-lock.json ./
 COPY apps ./apps
 COPY packages ./packages
@@ -19,3 +17,6 @@ COPY tsconfig.base.json ./
 
 RUN npm ci
 RUN npm run prisma:generate
+RUN npm run build
+
+ENV NODE_ENV=production

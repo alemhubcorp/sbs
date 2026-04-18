@@ -51,6 +51,24 @@ export default async function AdminHomePage() {
     reason?: string | null;
     createdAt?: string;
   }>;
+  const notifications = dashboard.notifications as Array<{
+    id?: string;
+    userId?: string;
+    type?: string;
+    title?: string;
+    message?: string;
+    read?: boolean;
+    createdAt?: string;
+  }>;
+  const auditEvents = dashboard.auditEvents as Array<{
+    id?: string;
+    module?: string;
+    eventType?: string;
+    subjectType?: string | null;
+    subjectId?: string | null;
+    actorId?: string | null;
+    createdAt?: string;
+  }>;
   const tenantOptions = dashboard.tenants as Array<{
     id?: string;
     name?: string;
@@ -181,7 +199,7 @@ export default async function AdminHomePage() {
       </p>
       <p>
         Tenant context: <strong>{authContext?.tenantId ?? 'platform'}</strong> | Roles:{' '}
-        <strong>{authContext?.roles?.join(', ') || 'none'}</strong> | <a href="/auth/logout">Logout</a>
+        <strong>{authContext?.roles?.join(', ') || 'none'}</strong> | <a href="/admin/auth/logout">Logout</a>
       </p>
       <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
         <a href="#identity">Identity</a>
@@ -190,7 +208,10 @@ export default async function AdminHomePage() {
         <a href="#contracts">Contracts</a>
         <a href="#payments">Payments</a>
         <a href="#logistics">Logistics</a>
+        <a href="/admin/partners">Partners</a>
+        <a href="/admin/settings/smtp">SMTP Settings</a>
         <a href="#approvals">Approvals</a>
+        <a href="#ops">Notifications / Audit</a>
       </nav>
       <div id="identity" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
         <article style={{ padding: 16, background: '#1f2937', borderRadius: 12 }}>
@@ -290,6 +311,33 @@ export default async function AdminHomePage() {
             <input name="comment" placeholder="Rejection reason" />
             <button type="submit">Reject</button>
           </form>
+        </article>
+      </div>
+
+      <div id="ops" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+          <h2 style={{ marginTop: 0 }}>Notifications</h2>
+          <p style={{ marginTop: 0 }}>Recent in-app notifications and system messages.</p>
+          <ul style={{ paddingLeft: 20, margin: 0 }}>
+            {notifications.length === 0 ? <li>No notifications yet.</li> : null}
+            {notifications.slice(0, 8).map((notification) => (
+              <li key={notification.id}>
+                {notification.title} [{notification.type}] {notification.read ? 'read' : 'unread'}
+              </li>
+            ))}
+          </ul>
+        </article>
+        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+          <h2 style={{ marginTop: 0 }}>Audit Trail</h2>
+          <p style={{ marginTop: 0 }}>Backend append-only event log.</p>
+          <ul style={{ paddingLeft: 20, margin: 0 }}>
+            {auditEvents.length === 0 ? <li>No audit events yet.</li> : null}
+            {auditEvents.slice(0, 8).map((event) => (
+              <li key={event.id}>
+                {event.module} / {event.eventType} [{event.subjectType ?? 'n/a'}:{event.subjectId ?? 'n/a'}]
+              </li>
+            ))}
+          </ul>
         </article>
       </div>
 

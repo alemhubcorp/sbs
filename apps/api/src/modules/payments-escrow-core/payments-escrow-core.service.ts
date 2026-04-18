@@ -5,6 +5,7 @@ import { ApprovalPolicyService } from '../../app/approval-policy.service.js';
 import type { AuthContext, RequestAuditContext } from '../../app/auth-context.js';
 import { ResourceAccessService } from '../../app/resource-access.service.js';
 import { AuditService } from '../audit-observability/audit.service.js';
+import { NotificationService } from '../notifications-core/notification.service.js';
 import { PaymentsEscrowCoreRepository } from './payments-escrow-core.repository.js';
 
 const createTransactionSchema = z.object({
@@ -23,6 +24,7 @@ export class PaymentsEscrowCoreService {
   constructor(
     @Inject(PaymentsEscrowCoreRepository) private readonly paymentsEscrowCoreRepository: PaymentsEscrowCoreRepository,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(NotificationService) private readonly notificationService: NotificationService,
     @Inject(ApprovalService) private readonly approvalService: ApprovalService,
     @Inject(ApprovalPolicyService) private readonly approvalPolicyService: ApprovalPolicyService,
     @Inject(ResourceAccessService) private readonly resourceAccessService: ResourceAccessService
@@ -58,6 +60,8 @@ export class PaymentsEscrowCoreService {
       }
     });
 
+    await this.emitDealNotification(transaction, 'payment.transaction.created', 'Escrow transaction created', 'The escrow transaction has been created for this deal.');
+
     return transaction;
   }
 
@@ -69,6 +73,7 @@ export class PaymentsEscrowCoreService {
     });
 
     await this.recordStateAudit('payment.transaction.held', transaction, auditContext);
+    await this.emitDealNotification(transaction, 'payment.transaction.held', 'Escrow funded', 'Funds are now secured in escrow.');
     return transaction;
   }
 
@@ -143,6 +148,7 @@ export class PaymentsEscrowCoreService {
     });
 
     await this.recordStateAudit('payment.transaction.released', transaction, auditContext);
+    await this.emitDealNotification(transaction, 'payment.transaction.released', 'Release approved', 'Escrow funds were released for payout.');
     return transaction;
   }
 
@@ -217,6 +223,25 @@ export class PaymentsEscrowCoreService {
     });
 
     await this.recordStateAudit('payment.transaction.refunded', transaction, auditContext);
+    await this.emitDealNotification(transaction, 'payment.transaction.refunded', 'Refund completed', 'A refund was recorded for this escrow transaction.');
+    return transaction;
+  }
+
+  async markPayoutFailed(
+    id: string,
+    input: unknown,
+    auditContext: RequestAuditContext,
+    authContext: AuthContext
+  ) {
+    await this.resourceAccessService.ensurePaymentAccess(authContext, id);
+    const parsed = updateEscrowSchema.parse(input);
+    const transaction = await this.paymentsEscrowCoreRepository.markPayoutFailed({
+      paymentTransactionId: id,
+      ...parsed
+    });
+
+    await this.recordStateAudit('payment.transaction.payout_failed', transaction, auditContext);
+    await this.emitDealNotification(transaction, 'payment.transaction.payout_failed', 'Payout failed', 'The payout could not be completed and requires review.');
     return transaction;
   }
 
@@ -277,5 +302,36 @@ export class PaymentsEscrowCoreService {
     if (refundAmountMinor <= 0 || refundAmountMinor > refundableHeldMinor) {
       throw new ConflictException('Refund amount must be positive and within held funds.');
     }
+  }
+
+  private async emitDealNotification(
+    transaction: Awaited<ReturnType<PaymentsEscrowCoreRepository['getTransactionById']>>,
+    type: string,
+    title: string,
+    message: string
+  ) {
+    const recipients = [transaction.deal?.buyerUserId, transaction.deal?.sellerUserId].filter(
+      (value): value is string => Boolean(value)
+    );
+
+    if (!recipients.length || !transaction.deal?.id) {
+      return;
+    }
+
+    await this.notificationService.emitMany(recipients, {
+      type,
+      title,
+      message,
+      entityType: 'payment-transaction',
+      entityId: transaction.id,
+      metadata: {
+        dealId: transaction.deal.id,
+        dealTitle: transaction.deal.title,
+        status: transaction.status,
+        heldAmountMinor: transaction.heldAmountMinor,
+        releasedAmountMinor: transaction.releasedAmountMinor,
+        refundedAmountMinor: transaction.refundedAmountMinor
+      }
+    });
   }
 }

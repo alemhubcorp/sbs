@@ -1,5 +1,5 @@
 const base = process.env.RUFLO_BASE_URL ?? 'http://localhost:3000';
-const keycloak = process.env.RUFLO_KEYCLOAK_URL ?? 'http://localhost:8080';
+const keycloak = process.env.RUFLO_KEYCLOAK_URL ?? 'https://alemhub.sbs/auth';
 
 async function request(url, options = {}) {
   const response = await fetch(url, options);

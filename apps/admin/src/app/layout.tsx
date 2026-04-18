@@ -17,6 +17,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <p>Approvals</p>
               <p>Operations</p>
               <p>Modules</p>
+              <p>Partners</p>
+              <p>SMTP</p>
             </nav>
           </aside>
           <main style={{ padding: 24 }}>{children}</main>

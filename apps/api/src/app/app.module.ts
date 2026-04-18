@@ -8,22 +8,30 @@ import { InfrastructureModule } from './infrastructure.module.js';
 import { loadRuntimeConfig } from '@ruflo/config';
 import { AuditObservabilityNestModule } from '../modules/audit-observability/audit-observability.nest-module.js';
 import { AdminCoreNestModule } from '../modules/admin-core/admin-core.nest-module.js';
+import { AdminOpsNestModule } from '../modules/admin-ops/admin-ops.nest-module.js';
 import { CatalogProductNestModule } from '../modules/catalog-product/catalog-product.nest-module.js';
 import { ContractCoreNestModule } from '../modules/contract-core/contract-core.nest-module.js';
 import { DisputeCoreNestModule } from '../modules/dispute-core/dispute-core.nest-module.js';
+import { ComplianceCoreNestModule } from '../modules/compliance-core/compliance-core.nest-module.js';
 import { DocumentCoreNestModule } from '../modules/document-core/document-core.nest-module.js';
 import { IdentityAccessNestModule } from '../modules/identity-access/identity-access.nest-module.js';
 import { LogisticsCoreNestModule } from '../modules/logistics-core/logistics-core.nest-module.js';
+import { NotificationsCoreNestModule } from '../modules/notifications-core/notifications-core.nest-module.js';
 import { RetailOrdersCheckoutNestModule } from '../modules/retail-orders-checkout/retail-orders-checkout.nest-module.js';
 import { TenantOrgNestModule } from '../modules/tenant-org/tenant-org.nest-module.js';
 import { WholesaleCoreNestModule } from '../modules/wholesale-core/wholesale-core.nest-module.js';
 import { PaymentsEscrowCoreNestModule } from '../modules/payments-escrow-core/payments-escrow-core.nest-module.js';
+import { PaymentCoreNestModule } from '../modules/payment-core/payment-core.nest-module.js';
+import { PaymentOpsNestModule } from '../modules/payment-ops/payment-ops.nest-module.js';
+import { PartnerOpsNestModule } from '../modules/partner-ops/partner-ops.nest-module.js';
 
 @Module({
   imports: [
     InfrastructureModule,
     AuditObservabilityNestModule,
     AdminCoreNestModule,
+    AdminOpsNestModule,
+    ComplianceCoreNestModule,
     IdentityAccessNestModule,
     TenantOrgNestModule,
     CatalogProductNestModule,
@@ -31,6 +39,10 @@ import { PaymentsEscrowCoreNestModule } from '../modules/payments-escrow-core/pa
     WholesaleCoreNestModule,
     ContractCoreNestModule,
     DocumentCoreNestModule,
+    NotificationsCoreNestModule,
+    PaymentCoreNestModule,
+    PaymentOpsNestModule,
+    PartnerOpsNestModule,
     PaymentsEscrowCoreNestModule,
     DisputeCoreNestModule,
     LogisticsCoreNestModule,

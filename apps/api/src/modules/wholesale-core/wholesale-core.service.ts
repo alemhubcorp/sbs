@@ -1,11 +1,13 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { z } from 'zod';
 import { ApprovalService } from '../../app/approval.service.js';
 import { ApprovalPolicyService } from '../../app/approval-policy.service.js';
 import type { AuthContext, RequestAuditContext } from '../../app/auth-context.js';
+import { ComplianceCoreService } from '../compliance-core/compliance-core.service.js';
 import { ResourceAccessService } from '../../app/resource-access.service.js';
 import { AuditService } from '../audit-observability/audit.service.js';
+import { NotificationService } from '../notifications-core/notification.service.js';
 import { WholesaleCoreRepository } from './wholesale-core.repository.js';
 
 const createWholesaleRfqSchema = z.object({
@@ -39,8 +41,10 @@ export class WholesaleCoreService {
   constructor(
     @Inject(WholesaleCoreRepository) private readonly wholesaleCoreRepository: WholesaleCoreRepository,
     @Inject(AuditService) private readonly auditService: AuditService,
+    @Inject(NotificationService) private readonly notificationService: NotificationService,
     @Inject(ApprovalService) private readonly approvalService: ApprovalService,
     @Inject(ApprovalPolicyService) private readonly approvalPolicyService: ApprovalPolicyService,
+    @Inject(ComplianceCoreService) private readonly complianceCoreService: ComplianceCoreService,
     @Inject(ResourceAccessService) private readonly resourceAccessService: ResourceAccessService
   ) {}
 
@@ -52,6 +56,14 @@ export class WholesaleCoreService {
   async createRfq(input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
     const parsed = createWholesaleRfqSchema.parse(input);
     this.resourceAccessService.ensureTenantAccess(authContext, parsed.tenantId);
+    if (!authContext.roles.includes('platform_admin') && !authContext.roles.includes('customer_user')) {
+      throw new ForbiddenException('Buyer access required.');
+    }
+
+    if (!authContext.roles.includes('platform_admin')) {
+      await this.complianceCoreService.requireBuyerB2bApproval(authContext);
+    }
+
     const rfq = await this.wholesaleCoreRepository.createRfq(parsed);
 
     await this.auditService.record({
@@ -80,6 +92,14 @@ export class WholesaleCoreService {
 
   async submitQuote(rfqId: string, input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
     await this.resourceAccessService.ensureRfqAccess(authContext, rfqId);
+    if (!authContext.roles.includes('platform_admin') && !authContext.roles.includes('supplier_user')) {
+      throw new ForbiddenException('Supplier access required.');
+    }
+
+    if (!authContext.roles.includes('platform_admin')) {
+      await this.complianceCoreService.requireSupplierApproval(authContext);
+    }
+
     const quote = await this.wholesaleCoreRepository.submitQuote({
       rfqId,
       ...createWholesaleQuoteSchema.parse(input)
@@ -129,6 +149,14 @@ export class WholesaleCoreService {
     const parsed = acceptWholesaleQuoteSchema.parse(input);
     const quote = await this.wholesaleCoreRepository.getQuoteById(quoteId);
     this.resourceAccessService.ensureTenantAccess(authContext, quote.rfq.tenantId);
+    if (!authContext.roles.includes('platform_admin') && !authContext.roles.includes('customer_user')) {
+      throw new ForbiddenException('Buyer access required.');
+    }
+
+    if (!authContext.roles.includes('platform_admin')) {
+      await this.complianceCoreService.requireBuyerB2bApproval(authContext);
+    }
+
     const approvalRule = this.approvalPolicyService.getRule('wholesale.quote.accept');
 
     if (!options.skipApproval && approvalRule?.enabled) {
@@ -201,6 +229,42 @@ export class WholesaleCoreService {
       }
     });
 
+    await this.emitDealNotification(
+      deal,
+      'wholesale.deal.created',
+      'Deal created',
+      'The quote was accepted and a new wholesale deal has been created.'
+    );
+
     return deal;
+  }
+
+  private async emitDealNotification(
+    deal: Awaited<ReturnType<WholesaleCoreRepository['getDealById']>>,
+    type: string,
+    title: string,
+    message: string
+  ) {
+    const recipients = [deal.buyerProfile?.userId, deal.sellerProfile?.userId].filter(
+      (value): value is string => Boolean(value)
+    );
+
+    if (!recipients.length) {
+      return;
+    }
+
+    await this.notificationService.emitMany(recipients, {
+      type,
+      title,
+      message,
+      entityType: 'wholesale-deal',
+      entityId: deal.id,
+      metadata: {
+        rfqId: deal.rfqId,
+        acceptedQuoteId: deal.acceptedQuoteId,
+        tenantId: deal.tenantId,
+        status: deal.status
+      }
+    });
   }
 }

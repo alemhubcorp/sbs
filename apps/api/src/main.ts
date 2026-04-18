@@ -8,6 +8,16 @@ import { loadRuntimeConfig } from '@ruflo/config';
 
 async function bootstrap() {
   const config = loadRuntimeConfig();
+  const allowedOrigins = [
+    ...[config.auth.adminAppUrl, config.auth.webAppUrl].map((url) => new URL(url).origin),
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3002'
+  ];
+  const allowedOriginSet = new Set(allowedOrigins);
+  const allowedHeaders = 'Authorization, Content-Type, X-Correlation-Id';
+  const allowedMethods = 'GET,POST,PUT,PATCH,DELETE,OPTIONS';
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
@@ -17,6 +27,19 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api');
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin ${origin} is not allowed by CORS.`), false);
+    },
+    credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Correlation-Id'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+  });
   app.useGlobalFilters(new AllExceptionsFilter());
   const fastify = app.getHttpAdapter().getInstance();
 
@@ -26,6 +49,34 @@ async function bootstrap() {
       (Array.isArray(existingHeader) ? existingHeader[0] : existingHeader) ?? request.id ?? randomUUID();
     request.headers['x-correlation-id'] = correlationId;
     reply.header('x-correlation-id', correlationId);
+  });
+
+  fastify.options('/api/*', async (request, reply) => {
+    const origin = request.headers.origin;
+
+    if (typeof origin === 'string' && allowedOriginSet.has(origin)) {
+      reply.header('access-control-allow-origin', origin);
+      reply.header('access-control-allow-credentials', 'true');
+      reply.header('access-control-allow-methods', allowedMethods);
+      reply.header('access-control-allow-headers', allowedHeaders);
+      reply.header('vary', 'Origin');
+    }
+
+    reply.code(204).send();
+  });
+
+  fastify.addHook('onSend', async (request, reply, payload) => {
+    const origin = request.headers.origin;
+
+    if (typeof origin === 'string' && allowedOriginSet.has(origin)) {
+      reply.header('access-control-allow-origin', origin);
+      reply.header('access-control-allow-credentials', 'true');
+      reply.header('access-control-allow-methods', allowedMethods);
+      reply.header('access-control-allow-headers', allowedHeaders);
+      reply.header('vary', 'Origin');
+    }
+
+    return payload;
   });
 
   await app.listen(config.app.port, '0.0.0.0');

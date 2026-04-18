@@ -18,4 +18,8 @@ export class AuditService {
     const { limit } = listAuditEventsSchema.parse(query);
     return this.auditRepository.list(limit);
   }
+
+  listBySubject(subjectType: string, subjectId: string, limit = 100) {
+    return this.auditRepository.listBySubject(subjectType, subjectId, limit);
+  }
 }

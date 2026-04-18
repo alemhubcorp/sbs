@@ -21,10 +21,13 @@ export interface AdminDashboardData {
   wholesaleDealDetails: unknown[];
   contracts: unknown[];
   documents: unknown[];
+  notifications: unknown[];
+  auditEvents: unknown[];
   paymentTransactions: unknown[];
   disputes: unknown[];
   logisticsProviders: unknown[];
   logisticsSelections: unknown[];
+  emailSetting: unknown | null;
 }
 
 async function fetchJson<T>(path: string, accessToken: string): Promise<T> {
@@ -58,15 +61,19 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     fetchJson<unknown[]>('/api/retail/orders', accessToken)
   ]);
 
-  const [wholesaleRfqs, wholesaleDeals, contracts, documents, paymentTransactions, disputes, logisticsProviders] = await Promise.allSettled([
+  const [wholesaleRfqs, wholesaleDeals, contracts, documents, notifications, auditEvents, paymentTransactions, disputes, logisticsProviders] = await Promise.allSettled([
     fetchJson<unknown[]>('/api/wholesale/rfqs', accessToken),
     fetchJson<unknown[]>('/api/wholesale/deals', accessToken),
     fetchJson<unknown[]>('/api/contracts', accessToken),
     fetchJson<unknown[]>('/api/documents', accessToken),
+    fetchJson<unknown[]>('/api/notifications?limit=20', accessToken),
+    fetchJson<unknown[]>('/api/audit/events?limit=20', accessToken),
     fetchJson<unknown[]>('/api/payments/transactions', accessToken),
     fetchJson<unknown[]>('/api/disputes', accessToken),
     fetchJson<unknown[]>('/api/logistics/providers', accessToken)
   ]);
+
+  const emailSetting = await Promise.allSettled([fetchJson<unknown>('/api/admin/settings/email:default', accessToken)]);
 
   const dealRecords = wholesaleDeals.status === 'fulfilled' ? wholesaleDeals.value : [];
   const dealIds = dealRecords
@@ -118,9 +125,17 @@ export async function getAdminDashboardData(): Promise<AdminDashboardData> {
     wholesaleDealDetails: dealDetailResults.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
     contracts: contracts.status === 'fulfilled' ? contracts.value : [],
     documents: documents.status === 'fulfilled' ? documents.value : [],
+    notifications:
+      notifications.status === 'fulfilled' && notifications.value && typeof notifications.value === 'object'
+        ? Array.isArray((notifications.value as unknown as { items?: unknown[] }).items)
+          ? (notifications.value as unknown as { items: unknown[] }).items
+          : []
+        : [],
+    auditEvents: auditEvents.status === 'fulfilled' ? auditEvents.value : [],
     paymentTransactions: paymentTransactions.status === 'fulfilled' ? paymentTransactions.value : [],
     disputes: disputes.status === 'fulfilled' ? disputes.value : [],
     logisticsProviders: logisticsProviders.status === 'fulfilled' ? logisticsProviders.value : [],
-    logisticsSelections: logisticsSelectionResults.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
+    logisticsSelections: logisticsSelectionResults.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : [])),
+    emailSetting: emailSetting[0].status === 'fulfilled' ? emailSetting[0].value : null
   };
 }

@@ -77,6 +77,8 @@ export class PaymentsEscrowCoreRepository {
     const transactions = await this.prismaService.client.$queryRaw<(PaymentTransactionRow & {
       dealTitle: string | null;
       dealTenantId: string | null;
+      buyerUserId: string | null;
+      sellerUserId: string | null;
     })[]>(Prisma.sql`
       SELECT
         pt.id,
@@ -91,9 +93,13 @@ export class PaymentsEscrowCoreRepository {
         pt."createdAt",
         pt."updatedAt",
         wd.title AS "dealTitle",
-        wd."tenantId" AS "dealTenantId"
+        wd."tenantId" AS "dealTenantId",
+        bp."userId" AS "buyerUserId",
+        sp."userId" AS "sellerUserId"
       FROM "PaymentTransaction" pt
       LEFT JOIN "WholesaleDeal" wd ON wd.id = pt."dealId"
+      LEFT JOIN "BuyerProfile" bp ON bp.id = wd."buyerProfileId"
+      LEFT JOIN "SellerProfile" sp ON sp.id = wd."sellerProfileId"
       WHERE pt.id = ${id}
     `);
 
@@ -125,7 +131,9 @@ export class PaymentsEscrowCoreRepository {
         ? {
             id: transaction.dealId,
             title: transaction.dealTitle,
-            tenantId: transaction.dealTenantId
+            tenantId: transaction.dealTenantId,
+            buyerUserId: transaction.buyerUserId,
+            sellerUserId: transaction.sellerUserId
           }
         : null,
       ledgerEntries
@@ -216,9 +224,13 @@ export class PaymentsEscrowCoreRepository {
     return this.transitionAmounts(input.paymentTransactionId, 'refund', input.amountMinor, input.note);
   }
 
+  async markPayoutFailed(input: UpdateEscrowAmountInput) {
+    return this.transitionAmounts(input.paymentTransactionId, 'dispute', input.amountMinor, input.note);
+  }
+
   private async transitionAmounts(
     paymentTransactionId: string,
-    action: 'hold' | 'release' | 'refund',
+    action: 'hold' | 'release' | 'refund' | 'dispute',
     requestedAmountMinor?: number,
     note?: string
   ) {
@@ -394,6 +406,45 @@ export class PaymentsEscrowCoreRepository {
             ${current.releasedAmountMinor},
             ${nextRefundedMinor},
             ${note ?? 'funds refunded'},
+            NOW()
+          )
+          `);
+      }
+
+      if (action === 'dispute') {
+        if (!['held', 'partially_released', 'released'].includes(current.status)) {
+          throw new ConflictException(`Payment transaction ${paymentTransactionId} cannot be marked as payout failed from ${current.status}.`);
+        }
+
+        await tx.$executeRaw(Prisma.sql`
+          UPDATE "PaymentTransaction"
+          SET
+            status = ${'disputed'}::"PaymentTransactionStatus",
+            "updatedAt" = NOW()
+          WHERE id = ${paymentTransactionId}
+        `);
+
+        await tx.$executeRaw(Prisma.sql`
+          INSERT INTO "PaymentLedgerEntry" (
+            id,
+            "paymentTransactionId",
+            "entryType",
+            "amountMinor",
+            "resultingHeldMinor",
+            "resultingReleasedMinor",
+            "resultingRefundedMinor",
+            note,
+            "createdAt"
+          )
+          VALUES (
+            ${ledgerEntryId},
+            ${paymentTransactionId},
+            ${'dispute'}::"PaymentLedgerEntryType",
+            ${0},
+            ${current.heldAmountMinor},
+            ${current.releasedAmountMinor},
+            ${current.refundedAmountMinor},
+            ${note ?? 'payout failed'},
             NOW()
           )
         `);

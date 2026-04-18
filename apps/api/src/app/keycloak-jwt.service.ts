@@ -47,10 +47,19 @@ export class KeycloakJwtService {
   }
 
   private getIssuerUrl() {
+    const issuer =
+      this.configService.get<string>('auth.issuer') ??
+      process.env.KEYCLOAK_ISSUER ??
+      null;
+
+    if (issuer) {
+      return this.trimTrailingSlash(issuer);
+    }
+
     const publicUrl =
       this.configService.get<string>('auth.publicUrl') ??
       process.env.KEYCLOAK_PUBLIC_URL ??
-      `http://${this.configService.getOrThrow<string>('auth.keycloakHost')}:${this.configService.getOrThrow<number>('auth.keycloakPort')}`;
+      `http://${this.configService.getOrThrow<string>('auth.keycloakHost')}:${this.configService.getOrThrow<number>('auth.keycloakPort')}/auth`;
 
     return `${this.trimTrailingSlash(publicUrl)}${this.getRealmPath()}`;
   }
@@ -59,7 +68,7 @@ export class KeycloakJwtService {
     const internalUrl =
       this.configService.get<string>('auth.internalUrl') ??
       process.env.KEYCLOAK_INTERNAL_URL ??
-      `http://${this.configService.getOrThrow<string>('auth.keycloakHost')}:${this.configService.getOrThrow<number>('auth.keycloakPort')}`;
+      `http://${this.configService.getOrThrow<string>('auth.keycloakHost')}:${this.configService.getOrThrow<number>('auth.keycloakPort')}/auth`;
 
     return this.trimTrailingSlash(internalUrl);
   }

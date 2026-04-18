@@ -1,16 +1,14 @@
 import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'RuFlo Web',
-  description: 'RuFlo client application'
+  title: 'Safe-Contract - Global B2B2C Trade Platform',
+  description: 'Global B2B2C trade platform with escrow-protected transactions.'
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: 'sans-serif', margin: 0, background: '#f7f7f2', color: '#1f2937' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: 24 }}>{children}</div>
-      </body>
+      <body style={{ margin: 0, background: '#fff', color: '#111' }}>{children}</body>
     </html>
   );
 }

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_URL="${RUFLO_BASE_URL:-http://localhost:3000}"
-KC_URL="${RUFLO_KEYCLOAK_URL:-http://localhost:8080}"
+KC_URL="${RUFLO_KEYCLOAK_URL:-https://alemhub.sbs/auth}"
 
 tmpdir="$(mktemp -d)"
 cleanup() {

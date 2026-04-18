@@ -4,10 +4,12 @@ import { buildLogoutUrl, clearSession, getOptionalSession } from '../../../lib/a
 export async function GET(request: Request) {
   const session = await getOptionalSession();
   await clearSession();
+  const requestHost = request.headers.get('host');
+  const logoutUrl = buildLogoutUrl(session?.idToken, requestHost);
 
-  return NextResponse.redirect(buildLogoutUrl(session?.idToken), {
+  return NextResponse.redirect(logoutUrl, {
     headers: {
-      Location: buildLogoutUrl(session?.idToken)
+      Location: logoutUrl
     }
   });
 }

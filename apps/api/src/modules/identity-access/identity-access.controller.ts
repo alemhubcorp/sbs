@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Put, Req } from '@nestjs/common';
 import { extractRequestAuditContext, type ApiRequestLike } from '../../app/auth-context.js';
 import { CurrentAuthContext } from '../../app/current-auth-context.decorator.js';
+import { Public } from '../../app/public.decorator.js';
 import { RequirePermissions } from '../../app/permissions.decorator.js';
 import { IdentityAccessService } from './identity-access.service.js';
 
@@ -32,6 +33,12 @@ export class IdentityAccessController {
   @RequirePermissions('identity.manage')
   createUser(@Body() body: unknown, @Req() request: ApiRequestLike) {
     return this.identityAccessService.createUser(body, extractRequestAuditContext(request));
+  }
+
+  @Post('public/register/:kind')
+  @Public()
+  registerPublicAccount(@Param('kind') kind: string, @Body() body: unknown, @Req() request: ApiRequestLike) {
+    return this.identityAccessService.registerPublicAccount(kind, body, extractRequestAuditContext(request));
   }
 
   @Put('users/:id/roles')

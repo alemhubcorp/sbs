@@ -15,7 +15,20 @@ const createTenantSchema = z.object({
 
 const createOrganizationSchema = z.object({
   name: z.string().min(1).max(120),
-  legalName: z.string().min(1).max(200).optional()
+  legalName: z.string().min(1).max(200).optional(),
+  partnerType: z.enum(['logistics_company', 'customs_broker', 'insurance_company', 'surveyor', 'bank']).optional().nullable(),
+  status: z.enum(['active', 'inactive']).default('active'),
+  linkedUserId: z.string().min(1).optional().nullable(),
+  contactName: z.string().min(1).max(120).optional(),
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().min(1).max(40).optional(),
+  address: z.string().min(1).max(250).optional(),
+  country: z.string().min(1).max(80).optional(),
+  notes: z.string().max(1000).optional()
+});
+
+const updateOrganizationSchema = createOrganizationSchema.partial().extend({
+  name: z.string().min(1).max(120).optional()
 });
 
 const createOrgUnitSchema = z.object({
@@ -100,6 +113,41 @@ export class TenantOrgService {
       subjectId: organization.id,
       payload: {
         name: organization.name
+      }
+    });
+
+    return organization;
+  }
+
+  async updateOrganization(
+    tenantId: string,
+    organizationId: string,
+    input: unknown,
+    auditContext: RequestAuditContext,
+    authContext: AuthContext
+  ) {
+    this.resourceAccessService.ensureTenantAccess(authContext, tenantId);
+    const parsed = updateOrganizationSchema.parse(input);
+    await this.resourceAccessService.ensureOrganizationAccess(authContext, organizationId);
+
+    const organization = await this.tenantOrgRepository.updateOrganization({
+      tenantId,
+      organizationId,
+      ...parsed
+    });
+
+    await this.auditService.record({
+      module: 'tenant-org',
+      eventType: 'tenant.organization.updated',
+      actorId: auditContext.actorId,
+      tenantId,
+      correlationId: auditContext.correlationId,
+      subjectType: 'organization',
+      subjectId: organization.id,
+      payload: {
+        name: organization.name,
+        partnerType: (organization as any).partnerType,
+        status: (organization as any).status
       }
     });
 

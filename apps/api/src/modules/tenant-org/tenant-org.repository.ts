@@ -14,6 +14,20 @@ export interface CreateOrganizationRecordInput {
   tenantId: string;
   name: string;
   legalName?: string | undefined;
+  partnerType?: 'logistics_company' | 'customs_broker' | 'insurance_company' | 'surveyor' | 'bank' | null | undefined;
+  status?: 'active' | 'inactive' | undefined;
+  linkedUserId?: string | null | undefined;
+  contactName?: string | undefined;
+  contactEmail?: string | undefined;
+  contactPhone?: string | undefined;
+  address?: string | undefined;
+  country?: string | undefined;
+  notes?: string | undefined;
+}
+
+export interface UpdateOrganizationRecordInput extends Omit<CreateOrganizationRecordInput, 'name'> {
+  organizationId: string;
+  name?: string | undefined;
 }
 
 export interface CreateOrgUnitRecordInput {
@@ -40,7 +54,11 @@ export class TenantOrgRepository {
   async listTenants() {
     return this.prismaService.client.tenant.findMany({
       include: {
-        organizations: true,
+        organizations: {
+          include: {
+            linkedUser: true
+          }
+        },
         memberships: {
           include: {
             user: true
@@ -58,6 +76,9 @@ export class TenantOrgRepository {
       where: { id },
       include: {
         organizations: {
+          include: {
+            linkedUser: true
+          },
           orderBy: {
             createdAt: 'asc'
           }
@@ -131,7 +152,11 @@ export class TenantOrgRepository {
         return tx.tenant.findUniqueOrThrow({
           where: { id: tenant.id },
           include: {
-            organizations: true,
+            organizations: {
+              include: {
+                linkedUser: true
+              }
+            },
             memberships: {
               include: {
                 user: true,
@@ -151,6 +176,9 @@ export class TenantOrgRepository {
 
     return this.prismaService.client.organization.findMany({
       where: { tenantId },
+      include: {
+        linkedUser: true
+      },
       orderBy: {
         createdAt: 'asc'
       }
@@ -164,7 +192,48 @@ export class TenantOrgRepository {
       data: {
         tenantId: input.tenantId,
         name: input.name,
-        ...(input.legalName ? { legalName: input.legalName } : {})
+        ...(input.legalName ? { legalName: input.legalName } : {}),
+        ...(input.partnerType ? { partnerType: input.partnerType } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.linkedUserId !== undefined ? { linkedUserId: input.linkedUserId } : {}),
+        ...(input.contactName ? { contactName: input.contactName } : {}),
+        ...(input.contactEmail ? { contactEmail: input.contactEmail } : {}),
+        ...(input.contactPhone ? { contactPhone: input.contactPhone } : {}),
+        ...(input.address ? { address: input.address } : {}),
+        ...(input.country ? { country: input.country } : {}),
+        ...(input.notes ? { notes: input.notes } : {})
+      }
+    });
+  }
+
+  async updateOrganization(input: UpdateOrganizationRecordInput) {
+    await this.getTenantById(input.tenantId);
+
+    const organization = await this.prismaService.client.organization.findFirst({
+      where: {
+        id: input.organizationId,
+        tenantId: input.tenantId
+      }
+    });
+
+    if (!organization) {
+      throw new NotFoundException(`Organization ${input.organizationId} was not found in tenant ${input.tenantId}.`);
+    }
+
+    return this.prismaService.client.organization.update({
+      where: { id: input.organizationId },
+      data: {
+        ...(input.name ? { name: input.name } : {}),
+        ...(input.legalName !== undefined ? { legalName: input.legalName } : {}),
+        ...(input.partnerType !== undefined ? { partnerType: input.partnerType } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.linkedUserId !== undefined ? { linkedUserId: input.linkedUserId } : {}),
+        ...(input.contactName !== undefined ? { contactName: input.contactName } : {}),
+        ...(input.contactEmail !== undefined ? { contactEmail: input.contactEmail } : {}),
+        ...(input.contactPhone !== undefined ? { contactPhone: input.contactPhone } : {}),
+        ...(input.address !== undefined ? { address: input.address } : {}),
+        ...(input.country !== undefined ? { country: input.country } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes } : {})
       }
     });
   }

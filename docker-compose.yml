@@ -4,67 +4,110 @@ services:
     build:
       context: .
       dockerfile: infra/docker/node-prod/Dockerfile
-    command: ["true"]
+    command: 
 
   traefik:
     image: traefik:v3.1
+    security_opt:
+    - no-new-privileges:false
     command:
       - --api.dashboard=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
     ports:
       - "${TRAEFIK_HTTP_PORT:-80}:80"
       - "${TRAEFIK_HTTPS_PORT:-443}:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
     networks: [ruflo]
 
   web:
     image: ruflo-node-prod:latest
+    build:
+      context: .
+      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/web"
     env_file: .env.example
     environment:
       NODE_ENV: production
+      APP_URL: ${APP_URL:-https://alemhub.sbs}
+      WEB_URL: ${WEB_URL:-https://alemhub.sbs}
+      API_URL: ${API_URL:-https://alemhub.sbs/api}
       API_INTERNAL_BASE_URL: http://api:3000
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_API_BASE_URL: ${API_URL:-https://alemhub.sbs/api}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
+      NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      NEXT_PUBLIC_WEB_URL: ${WEB_URL:-https://alemhub.sbs}
     ports:
       - "${WEB_PORT:-3001}:3001"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.web.rule=Host(`web.localhost`)
+      - traefik.http.routers.web.rule=Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)
       - traefik.http.routers.web.entrypoints=web
+      - traefik.http.services.web.loadbalancer.server.port=3001
+      - traefik.docker.network=ruflo_project_ruflo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3001 >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
     restart: unless-stopped
     networks: [ruflo]
 
   admin:
     image: ruflo-node-prod:latest
+    build:
+      context: .
+      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/admin"
     env_file: .env.example
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+      APP_URL: ${APP_URL:-https://alemhub.sbs}
+      ADMIN_URL: ${ADMIN_URL:-https://alemhub.sbs/admin}
+      NEXT_PUBLIC_API_BASE_URL: ${API_URL:-https://alemhub.sbs/api}
       API_INTERNAL_BASE_URL: http://api:3000
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
+      NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://alemhub.sbs/admin}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-admin-nextauth-secret}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      NEXT_PUBLIC_ADMIN_URL: ${ADMIN_URL:-https://alemhub.sbs/admin}
     ports:
       - "${ADMIN_PORT:-3002}:3002"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.admin.rule=Host(`admin.localhost`)
+      - traefik.http.routers.admin.rule=Host(`alemhub.sbs`) && PathPrefix(`/admin`)
       - traefik.http.routers.admin.entrypoints=web
+      - traefik.http.services.admin.loadbalancer.server.port=3002
+      - traefik.docker.network=ruflo_project_ruflo
     restart: unless-stopped
     networks: [ruflo]
 
   api:
     image: ruflo-node-prod:latest
+    build:
+      context: .
+      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
-    command: sh -c "npm run prisma:migrate:deploy && npm run start -w @ruflo/api"
+    command: sh scripts/start-api-prod.sh
     env_file: .env.example
     environment:
       NODE_ENV: production
+      APP_URL: ${APP_URL:-https://alemhub.sbs}
+      WEB_URL: ${WEB_URL:-https://alemhub.sbs}
+      ADMIN_URL: ${ADMIN_URL:-https://alemhub.sbs/admin}
+      API_URL: ${API_URL:-https://alemhub.sbs/api}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-https://alemhub.sbs/auth/realms/ruflo}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      KEYCLOAK_BOOTSTRAP_ON_STARTUP: "true"
+      PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,13 +123,24 @@ services:
       - "${API_PORT:-3000}:3000"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.api.rule=Host(`api.localhost`)
+      - traefik.http.routers.api.rule=Host(`alemhub.sbs`) && PathPrefix(`/api`)
       - traefik.http.routers.api.entrypoints=web
+      - traefik.http.services.api.loadbalancer.server.port=3000
+      - traefik.docker.network=ruflo_project_ruflo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/health/readiness | grep -q '\"status\":\"ready\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     restart: unless-stopped
     networks: [ruflo]
 
   worker:
     image: ruflo-node-prod:latest
+    build:
+      context: .
+      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/worker"
     env_file: .env.example
@@ -106,6 +160,9 @@ services:
 
   ai-worker:
     image: ruflo-node-prod:latest
+    build:
+      context: .
+      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/ai-worker"
     env_file: .env.example
@@ -210,10 +267,10 @@ services:
       - start
       - --optimized
       - --http-port=8080
-      - --hostname=localhost
-      - --hostname-port=8080
+      - --hostname=${KEYCLOAK_HOSTNAME:-alemhub.sbs}
       - --hostname-strict=false
       - --hostname-strict-https=false
+      - --proxy-headers=xforwarded
     environment:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
@@ -223,20 +280,27 @@ services:
       KC_DB_PASSWORD: keycloak
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_PORT: "8080"
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-alemhub.sbs}
+      KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_PROXY_HEADERS: xforwarded
     depends_on:
       keycloak-postgres:
         condition: service_healthy
     ports:
       - "${KEYCLOAK_PORT:-8080}:8080"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.auth.rule=Host(`alemhub.sbs`) && PathPrefix(`/auth`)
+      - traefik.http.routers.auth.entrypoints=web
+      - traefik.http.services.auth.loadbalancer.server.port=8080
+      - traefik.docker.network=ruflo_project_ruflo
     healthcheck:
       test:
         - CMD-SHELL
         - >
           /bin/bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8080 &&
-          printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 &&
+          printf "GET /auth/health/ready HTTP/1.1\r\nHost: alemhub.sbs\r\nConnection: close\r\n\r\n" >&3 &&
           grep -q "200" <&3'
       interval: 10s
       timeout: 5s

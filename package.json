@@ -27,7 +27,9 @@
     "prisma:migrate:dev": "npm run prisma:migrate:dev -w @ruflo/database",
     "prisma:migrate:deploy": "npm run prisma:migrate:deploy -w @ruflo/database",
     "prisma:migrate:status": "npm run prisma:migrate:status -w @ruflo/database",
+    "compose:build": "docker compose build api web admin worker ai-worker keycloak",
     "compose:up": "docker compose up -d",
+    "rollout:prod": "npm run compose:build && docker compose up -d keycloak api web admin worker ai-worker",
     "compose:down": "docker compose down"
   },
   "engines": {

@@ -141,7 +141,7 @@ export class HealthController {
       redis: await probeRedis(config.redis.url),
       minio: await probeHttp(config.storage.url + '/minio/health/live'),
       meilisearch: await probeHttp(`${config.search.url}/health`, 5_000),
-      keycloak: await probeHttp(`http://${config.auth.keycloakHost}:${config.auth.keycloakPort}/realms/master`)
+      keycloak: await probeHttp(`http://${config.auth.keycloakHost}:${config.auth.keycloakPort}/auth/realms/master`)
     };
   }
 
@@ -194,7 +194,6 @@ export class HealthController {
     try {
       const dependencies = await this.collectDependencyHealth();
       const ready = Object.values(dependencies).every((dependency) => dependency.status !== 'down');
-
       return {
         status: ready ? 'ready' : 'degraded',
         app,

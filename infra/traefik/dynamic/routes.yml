@@ -1,0 +1,65 @@
+http:
+  middlewares:
+    forwarded-https:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Port: "443"
+
+  routers:
+    web:
+      entryPoints:
+        - web
+      rule: Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)
+      service: web
+      middlewares:
+        - forwarded-https
+      priority: 10
+
+    admin:
+      entryPoints:
+        - web
+      rule: Host(`alemhub.sbs`) && PathPrefix(`/admin`)
+      service: admin
+      middlewares:
+        - forwarded-https
+      priority: 80
+
+    api:
+      entryPoints:
+        - web
+      rule: Host(`alemhub.sbs`) && PathPrefix(`/api`)
+      service: api
+      middlewares:
+        - forwarded-https
+      priority: 90
+
+    auth:
+      entryPoints:
+        - web
+      rule: Host(`alemhub.sbs`) && PathPrefix(`/auth`)
+      service: auth
+      middlewares:
+        - forwarded-https
+      priority: 100
+
+  services:
+    web:
+      loadBalancer:
+        servers:
+          - url: http://web:3001
+
+    admin:
+      loadBalancer:
+        servers:
+          - url: http://admin:3002
+
+    api:
+      loadBalancer:
+        servers:
+          - url: http://api:3000
+
+    auth:
+      loadBalancer:
+        servers:
+          - url: http://keycloak:8080

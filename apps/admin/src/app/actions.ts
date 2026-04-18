@@ -6,7 +6,12 @@ import { requireAccessToken } from '../lib/auth';
 const internalBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
-async function sendJson(path: string, method: 'POST' | 'PUT', payload: Record<string, unknown>) {
+async function sendJson<T = unknown>(
+  path: string,
+  method: 'POST' | 'PUT',
+  payload: Record<string, unknown>,
+  revalidatePaths: string[] = ['/admin']
+): Promise<T> {
   const accessToken = await requireAccessToken('/');
   const response = await fetch(`${internalBaseUrl}${path}`, {
     method,
@@ -18,11 +23,22 @@ async function sendJson(path: string, method: 'POST' | 'PUT', payload: Record<st
   });
 
   if (!response.ok) {
-    throw new Error(`Request to ${path} failed with status ${response.status}`);
+    let reason = `Request to ${path} failed with status ${response.status}`;
+    try {
+      const errorBody = (await response.json()) as { error?: string; message?: string };
+      reason = errorBody.error ?? errorBody.message ?? reason;
+    } catch {
+      // Keep fallback error text.
+    }
+    throw new Error(reason);
   }
 
-  await response.json();
-  revalidatePath('/');
+  const data = (await response.json()) as T;
+  for (const pathToRevalidate of revalidatePaths) {
+    revalidatePath(pathToRevalidate);
+  }
+
+  return data;
 }
 
 export async function approveApprovalAction(formData: FormData) {
@@ -383,4 +399,247 @@ export async function selectLogisticsProviderAction(formData: FormData) {
     logisticsProviderId,
     notes: notes || undefined
   });
+}
+
+export async function createPartnerAction(formData: FormData) {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const linkedUserId = String(formData.get('linkedUserId') ?? '').trim();
+  const payload = {
+    name: String(formData.get('name') ?? '').trim(),
+    legalName: String(formData.get('legalName') ?? '').trim() || undefined,
+    partnerType: String(formData.get('partnerType') ?? 'logistics_company'),
+    status: String(formData.get('status') ?? 'active'),
+    ...(linkedUserId ? { linkedUserId } : {}),
+    contactName: String(formData.get('contactName') ?? '').trim() || undefined,
+    contactEmail: String(formData.get('contactEmail') ?? '').trim() || undefined,
+    contactPhone: String(formData.get('contactPhone') ?? '').trim() || undefined,
+    address: String(formData.get('address') ?? '').trim() || undefined,
+    country: String(formData.get('country') ?? '').trim() || undefined,
+    notes: String(formData.get('notes') ?? '').trim() || undefined
+  };
+
+  await sendJson(`/api/tenants/${tenantId}/organizations`, 'POST', payload, ['/admin', '/admin/partners']);
+}
+
+export async function updatePartnerAction(formData: FormData) {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const payload = {
+    ...(String(formData.get('name') ?? '').trim() ? { name: String(formData.get('name') ?? '').trim() } : {}),
+    ...(String(formData.get('legalName') ?? '').trim() ? { legalName: String(formData.get('legalName') ?? '').trim() } : {}),
+    ...(String(formData.get('partnerType') ?? '').trim() ? { partnerType: String(formData.get('partnerType') ?? 'logistics_company') } : {}),
+    ...(String(formData.get('status') ?? '').trim() ? { status: String(formData.get('status') ?? 'active') } : {}),
+    ...(String(formData.get('linkedUserId') ?? '').trim() ? { linkedUserId: String(formData.get('linkedUserId') ?? '').trim() } : { linkedUserId: null }),
+    ...(String(formData.get('contactName') ?? '').trim() ? { contactName: String(formData.get('contactName') ?? '').trim() } : {}),
+    ...(String(formData.get('contactEmail') ?? '').trim() ? { contactEmail: String(formData.get('contactEmail') ?? '').trim() } : {}),
+    ...(String(formData.get('contactPhone') ?? '').trim() ? { contactPhone: String(formData.get('contactPhone') ?? '').trim() } : {}),
+    ...(String(formData.get('address') ?? '').trim() ? { address: String(formData.get('address') ?? '').trim() } : {}),
+    ...(String(formData.get('country') ?? '').trim() ? { country: String(formData.get('country') ?? '').trim() } : {}),
+    ...(String(formData.get('notes') ?? '').trim() ? { notes: String(formData.get('notes') ?? '').trim() } : {})
+  };
+
+  await sendJson(`/api/tenants/${tenantId}/organizations/${organizationId}`, 'PUT', payload, ['/admin', '/admin/partners']);
+}
+
+export async function togglePartnerStatusAction(formData: FormData) {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const status = String(formData.get('status') ?? 'inactive');
+
+  await sendJson(
+    `/api/tenants/${tenantId}/organizations/${organizationId}`,
+    'PUT',
+    {
+      name: String(formData.get('name') ?? '').trim(),
+      legalName: String(formData.get('legalName') ?? '').trim() || undefined,
+      partnerType: String(formData.get('partnerType') ?? 'logistics_company'),
+      status,
+      linkedUserId: String(formData.get('linkedUserId') ?? '').trim() || undefined,
+      contactName: String(formData.get('contactName') ?? '').trim() || undefined,
+      contactEmail: String(formData.get('contactEmail') ?? '').trim() || undefined,
+      contactPhone: String(formData.get('contactPhone') ?? '').trim() || undefined,
+      address: String(formData.get('address') ?? '').trim() || undefined,
+      country: String(formData.get('country') ?? '').trim() || undefined,
+      notes: String(formData.get('notes') ?? '').trim() || undefined
+    },
+    ['/admin', '/admin/partners']
+  );
+}
+
+export async function createPartnerUserAction(formData: FormData) {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const email = String(formData.get('email') ?? '').trim();
+  const firstName = String(formData.get('firstName') ?? '').trim();
+  const lastName = String(formData.get('lastName') ?? '').trim();
+  const roleIds = formData
+    .getAll('roleIds')
+    .map((value) => String(value))
+    .filter((value) => value.length > 0);
+
+  const user = await sendJson<{ id: string }>(
+    '/api/identity/users',
+    'POST',
+    {
+      email,
+      firstName,
+      lastName,
+      roleIds
+    },
+    ['/admin', '/admin/partners']
+  );
+
+  await sendJson(
+    `/api/tenants/${tenantId}/organizations/${organizationId}`,
+    'PUT',
+    {
+      linkedUserId: user.id
+    },
+    ['/admin', '/admin/partners']
+  );
+
+  await sendJson(
+    `/api/tenants/${tenantId}/memberships`,
+    'POST',
+    {
+      userId: user.id,
+      organizationId,
+      membershipType: 'admin',
+      status: 'active'
+    },
+    ['/admin', '/admin/partners']
+  );
+}
+
+export async function linkExistingPartnerUserAction(formData: FormData) {
+  const tenantId = String(formData.get('tenantId') ?? '');
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const userId = String(formData.get('userId') ?? '').trim();
+  const roleId = String(formData.get('roleId') ?? '').trim();
+
+  await sendJson(
+    `/api/tenants/${tenantId}/organizations/${organizationId}`,
+    'PUT',
+    {
+      linkedUserId: userId || null
+    },
+    ['/admin', '/admin/partners']
+  );
+
+  if (roleId) {
+    await sendJson(
+      `/api/identity/users/${userId}/roles`,
+      'PUT',
+      {
+        roleIds: [roleId]
+      },
+      ['/admin', '/admin/partners']
+    );
+  }
+
+  await sendJson(
+    `/api/tenants/${tenantId}/memberships`,
+    'POST',
+    {
+      userId,
+      organizationId,
+      membershipType: 'admin',
+      status: 'active'
+    },
+    ['/admin', '/admin/partners']
+  );
+}
+
+export async function createAssignmentAction(formData: FormData) {
+  const payload = {
+    tenantId: String(formData.get('tenantId') ?? ''),
+    kind: String(formData.get('kind') ?? 'shipment'),
+    subjectType: String(formData.get('subjectType') ?? '').trim(),
+    subjectId: String(formData.get('subjectId') ?? '').trim(),
+    partnerOrganizationId: String(formData.get('partnerOrganizationId') ?? '').trim() || undefined,
+    partnerUserId: String(formData.get('partnerUserId') ?? '').trim() || undefined,
+    reference: String(formData.get('reference') ?? '').trim() || undefined,
+    status: String(formData.get('status') ?? '').trim() || undefined,
+    notes: String(formData.get('notes') ?? '').trim() || undefined
+  };
+
+  await sendJson('/api/partner-ops/assignments', 'POST', payload, ['/admin', '/admin/partners']);
+}
+
+export async function updateAssignmentAction(formData: FormData) {
+  const assignmentId = String(formData.get('assignmentId') ?? '');
+  const payload = {
+    partnerOrganizationId: String(formData.get('partnerOrganizationId') ?? '').trim() || null,
+    partnerUserId: String(formData.get('partnerUserId') ?? '').trim() || null,
+    reference: String(formData.get('reference') ?? '').trim() || null,
+    status: String(formData.get('status') ?? '').trim() || undefined,
+    notes: String(formData.get('notes') ?? '').trim() || null
+  };
+
+  await sendJson(`/api/partner-ops/assignments/${assignmentId}`, 'PUT', payload, ['/admin', '/admin/partners']);
+}
+
+export async function updateEmailSettingsAction(_prevStateOrFormData: unknown, maybeFormData?: FormData) {
+  const formData = maybeFormData ?? (_prevStateOrFormData as FormData);
+  const smtpPassword = String(formData.get('smtpPassword') ?? '').trim();
+
+  const payload = {
+    section: 'email',
+    value: {
+      enabled: String(formData.get('enabled') ?? 'off') === 'on',
+      provider: 'smtp',
+      smtpHost: String(formData.get('smtpHost') ?? '').trim(),
+      smtpPort: Number(formData.get('smtpPort') ?? 587),
+      smtpUser: String(formData.get('smtpUser') ?? '').trim(),
+      ...(smtpPassword ? { smtpPassword } : {}),
+      smtpSecure: String(formData.get('smtpSecure') ?? 'off') === 'on',
+      fromName: String(formData.get('fromName') ?? '').trim(),
+      fromEmail: String(formData.get('fromEmail') ?? '').trim(),
+      replyToEmail: String(formData.get('replyToEmail') ?? '').trim(),
+      supportEmail: String(formData.get('supportEmail') ?? '').trim(),
+      supportPhone: String(formData.get('supportPhone') ?? '').trim(),
+      notes: String(formData.get('notes') ?? '').trim()
+    }
+  };
+
+  try {
+    await sendJson('/api/admin/settings/email:default', 'PUT', payload, ['/admin', '/admin/settings/smtp']);
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to save SMTP settings.' };
+  }
+}
+
+export async function testEmailConfigurationAction(_prevStateOrFormData: unknown, maybeFormData?: FormData) {
+  const formData = maybeFormData ?? (_prevStateOrFormData as FormData);
+  const recipientEmail = String(formData.get('recipientEmail') ?? '').trim();
+
+  try {
+    const result = await sendJson<{
+      success: boolean;
+      error: string | null;
+      transport: string;
+      recipientEmail: string;
+      details: unknown;
+    }>(
+      '/api/admin/settings/email/test',
+      'POST',
+      {
+        recipientEmail,
+        subject: String(formData.get('subject') ?? 'RuFlo SMTP test'),
+        message: String(formData.get('message') ?? 'This is a test message from the RuFlo admin settings page.')
+      },
+      ['/admin', '/admin/settings/smtp']
+    );
+
+    return result;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to test SMTP configuration.',
+      transport: 'smtp',
+      recipientEmail,
+      details: null
+    };
+  }
 }

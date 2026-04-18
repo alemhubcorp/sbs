@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Inject, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Put, Req } from '@nestjs/common';
 import { extractRequestAuditContext, type ApiRequestLike } from '../../app/auth-context.js';
+import { CurrentAuthContext } from '../../app/current-auth-context.decorator.js';
 import { RequirePermissions } from '../../app/permissions.decorator.js';
 import { Public } from '../../app/public.decorator.js';
 import { CatalogProductService } from './catalog-product.service.js';
@@ -24,6 +25,22 @@ export class CatalogProductController {
   @RequirePermissions('catalog.read')
   listSellerProfiles() {
     return this.catalogProductService.listSellerProfiles();
+  }
+
+  @Get('seller-profiles/me')
+  @RequirePermissions('catalog.read')
+  getCurrentSellerProfile(@CurrentAuthContext() authContext: ApiRequestLike['authContext']) {
+    return this.catalogProductService.getCurrentSellerProfile(authContext!);
+  }
+
+  @Put('seller-profiles/me/payout-settings')
+  @RequirePermissions('catalog.read')
+  updateCurrentSellerPayoutSettings(
+    @Body() body: unknown,
+    @Req() request: ApiRequestLike,
+    @CurrentAuthContext() authContext: ApiRequestLike['authContext']
+  ) {
+    return this.catalogProductService.updateCurrentSellerPayoutSettings(body, extractRequestAuditContext(request), authContext!);
   }
 
   @Post('seller-profiles')

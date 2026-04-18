@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Put, Req } from '@nestjs/common';
 import { CurrentAuthContext } from '../../app/current-auth-context.decorator.js';
 import { extractRequestAuditContext, type ApiRequestLike } from '../../app/auth-context.js';
 import { RequirePermissions, RequireTenantContext } from '../../app/permissions.decorator.js';
@@ -43,6 +43,19 @@ export class TenantOrgController {
     @CurrentAuthContext() authContext: ApiRequestLike['authContext']
   ) {
     return this.tenantOrgService.createOrganization(id, body, extractRequestAuditContext(request), authContext!);
+  }
+
+  @Put('tenants/:id/organizations/:organizationId')
+  @RequirePermissions('tenant.manage')
+  @RequireTenantContext()
+  updateOrganization(
+    @Param('id') id: string,
+    @Param('organizationId') organizationId: string,
+    @Body() body: unknown,
+    @Req() request: ApiRequestLike,
+    @CurrentAuthContext() authContext: ApiRequestLike['authContext']
+  ) {
+    return this.tenantOrgService.updateOrganization(id, organizationId, body, extractRequestAuditContext(request), authContext!);
   }
 
   @Get('tenants/:id/org-units')

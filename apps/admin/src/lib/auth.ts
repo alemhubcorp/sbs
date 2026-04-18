@@ -11,6 +11,7 @@ const cookieNames = {
 } as const;
 
 const refreshThresholdMs = 30_000;
+const localHostPattern = /^(localhost|127\.0\.0\.1|::1)(:\d+)?$/i;
 
 export interface AuthSession {
   accessToken: string;
@@ -24,19 +25,62 @@ export interface AuthSession {
   };
 }
 
-function getConfig() {
-  const keycloakBaseUrl = process.env.NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL ?? 'http://localhost:8080';
+function normalizeHost(host: string | null | undefined) {
+  if (!host) {
+    return null;
+  }
+
+  return host.split(',')[0]?.trim() || null;
+}
+
+function isLocalHost(host: string | null | undefined) {
+  const normalized = normalizeHost(host);
+  return Boolean(normalized && localHostPattern.test(normalized));
+}
+
+function resolveAppUrl(defaultAppUrl: string, requestHost?: string | null) {
+  const normalizedHost = normalizeHost(requestHost);
+
+  if (!normalizedHost || !isLocalHost(normalizedHost)) {
+    return defaultAppUrl;
+  }
+
+  const defaultPath = new URL(defaultAppUrl).pathname;
+  return `http://${normalizedHost}${defaultPath === '/' ? '' : defaultPath}`;
+}
+
+function buildAdminPublicPath(path: string) {
+  const adminUrl = process.env.ADMIN_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? process.env.APP_URL ?? 'http://localhost:3002';
+  const url = new URL(adminUrl);
+  const basePath = url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '');
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${basePath}${normalizedPath}`;
+}
+
+function getConfig(requestHost?: string | null) {
   const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM ?? 'ruflo';
   const clientId = process.env.KEYCLOAK_ADMIN_CLIENT_ID ?? 'ruflo-admin-ui';
   const clientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET ?? 'change-me-admin-client';
-  const appUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'http://localhost:3002';
+  const defaultAppUrl =
+    process.env.ADMIN_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? process.env.APP_URL ?? 'http://localhost:3002';
+  const appUrl = resolveAppUrl(defaultAppUrl, requestHost);
+  const keycloakPublicUrl = isLocalHost(requestHost)
+    ? 'http://localhost:8080/auth'
+    : process.env.NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL ?? process.env.KEYCLOAK_PUBLIC_URL ?? 'http://localhost:8080/auth';
+  const keycloakInternalUrl =
+    process.env.KEYCLOAK_INTERNAL_URL ??
+    process.env.KEYCLOAK_PUBLIC_URL ??
+    keycloakPublicUrl;
+  const secureCookies = appUrl.startsWith('https://');
 
   return {
-    keycloakBaseUrl,
+    keycloakPublicUrl,
+    keycloakInternalUrl,
     realm,
     clientId,
     clientSecret,
     appUrl,
+    secureCookies,
     redirectUri: `${appUrl}/auth/callback`
   };
 }
@@ -72,12 +116,12 @@ function mapTokens(tokenResponse: {
   };
 }
 
-export async function createLoginRedirect(returnTo = '/') {
-  const { keycloakBaseUrl, realm, clientId, redirectUri } = getConfig();
+export async function createLoginRedirect(returnTo = '/', requestHost?: string | null) {
+  const { keycloakPublicUrl, realm, clientId, redirectUri, secureCookies } = getConfig(requestHost);
   const state = crypto.randomUUID();
   const cookieStore = await cookies();
-  cookieStore.set(cookieNames.state, state, { httpOnly: true, sameSite: 'lax', path: '/' });
-  cookieStore.set(cookieNames.returnTo, returnTo, { httpOnly: true, sameSite: 'lax', path: '/' });
+  cookieStore.set(cookieNames.state, state, { httpOnly: true, sameSite: 'lax', secure: secureCookies, path: '/' });
+  cookieStore.set(cookieNames.returnTo, returnTo, { httpOnly: true, sameSite: 'lax', secure: secureCookies, path: '/' });
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -87,12 +131,12 @@ export async function createLoginRedirect(returnTo = '/') {
     state
   });
 
-  redirect(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/auth?${params.toString()}`);
+  redirect(`${keycloakPublicUrl}/realms/${realm}/protocol/openid-connect/auth?${params.toString()}`);
 }
 
-export async function exchangeAuthorizationCode(code: string) {
-  const { keycloakBaseUrl, realm, clientId, clientSecret, redirectUri } = getConfig();
-  const response = await fetch(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`, {
+export async function exchangeAuthorizationCode(code: string, requestHost?: string | null) {
+  const { keycloakInternalUrl, realm, clientId, clientSecret, redirectUri } = getConfig(requestHost);
+  const response = await fetch(`${keycloakInternalUrl}/realms/${realm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded'
@@ -120,9 +164,9 @@ export async function exchangeAuthorizationCode(code: string) {
   );
 }
 
-export async function refreshSessionTokens(refreshToken: string) {
-  const { keycloakBaseUrl, realm, clientId, clientSecret } = getConfig();
-  const response = await fetch(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`, {
+export async function refreshSessionTokens(refreshToken: string, requestHost?: string | null) {
+  const { keycloakInternalUrl, realm, clientId, clientSecret } = getConfig(requestHost);
+  const response = await fetch(`${keycloakInternalUrl}/realms/${realm}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded'
@@ -151,9 +195,11 @@ export async function refreshSessionTokens(refreshToken: string) {
 
 export async function persistSession(session: AuthSession) {
   const cookieStore = await cookies();
+  const { secureCookies } = getConfig();
   const baseOptions = {
     httpOnly: true,
     sameSite: 'lax' as const,
+    secure: secureCookies,
     path: '/'
   };
 
@@ -213,13 +259,13 @@ export async function requireAccessToken(returnTo = '/') {
   const session = await getOptionalSession();
 
   if (!session) {
-    redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+    redirect(buildAdminPublicPath(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`));
   }
 
   const activeSession = session;
 
   if (activeSession.expiresAt <= Date.now() + refreshThresholdMs) {
-    redirect(`/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`);
+    redirect(buildAdminPublicPath(`/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`));
   }
 
   return activeSession.accessToken;
@@ -239,8 +285,8 @@ export async function getOptionalAccessToken() {
   return session.accessToken;
 }
 
-export function buildLogoutUrl(idTokenHint?: string | null) {
-  const { keycloakBaseUrl, realm, clientId, appUrl } = getConfig();
+export function buildLogoutUrl(idTokenHint?: string | null, requestHost?: string | null) {
+  const { keycloakPublicUrl, realm, clientId, appUrl } = getConfig(requestHost);
   const params = new URLSearchParams({
     client_id: clientId,
     post_logout_redirect_uri: appUrl
@@ -250,5 +296,5 @@ export function buildLogoutUrl(idTokenHint?: string | null) {
     params.set('id_token_hint', idTokenHint);
   }
 
-  return `${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/logout?${params.toString()}`;
+  return `${keycloakPublicUrl}/realms/${realm}/protocol/openid-connect/logout?${params.toString()}`;
 }

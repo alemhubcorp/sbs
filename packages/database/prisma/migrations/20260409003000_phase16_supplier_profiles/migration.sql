@@ -1,0 +1,3 @@
+ALTER TABLE "SellerProfile"
+ADD COLUMN IF NOT EXISTS "companyName" TEXT,
+ADD COLUMN IF NOT EXISTS "country" TEXT;

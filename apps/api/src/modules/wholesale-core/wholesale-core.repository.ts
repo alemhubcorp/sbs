@@ -225,6 +225,26 @@ export class WholesaleCoreRepository {
       }
     });
 
+    const agreementSnapshot = {
+      kind: 'wholesale_deal',
+      invoiceNumber: `INV-${quote.id.slice(0, 8).toUpperCase()}`,
+      quoteId: quote.id,
+      rfqId: quote.rfqId,
+      priceMinor: quote.amountMinor,
+      qty: 1,
+      currency: quote.currency,
+      parties: {
+        buyerProfileId: quote.rfq.buyerProfileId ?? null,
+        sellerProfileId: quote.sellerProfileId
+      },
+      timestamps: {
+        quoteCreatedAt: quote.createdAt.toISOString(),
+        acceptedAt: new Date().toISOString()
+      },
+      title: quote.rfq.title,
+      message: quote.message ?? null
+    };
+
     const deal = await tx.wholesaleDeal.create({
       data: {
         rfqId: quote.rfq.id,
@@ -234,6 +254,7 @@ export class WholesaleCoreRepository {
         sellerProfileId: quote.sellerProfileId,
         title: quote.rfq.title,
         status: 'in_room',
+        agreementSnapshot,
         ...(contractId ? { contractId } : {}),
         ...(documentLinkage ? { documentLinkage } : {}),
         dealRoom: {

@@ -4,6 +4,7 @@ ENV KC_HEALTH_ENABLED=true
 ENV KC_METRICS_ENABLED=true
 ENV KC_DB=postgres
 ENV KC_HTTP_ENABLED=true
+ENV KC_HTTP_RELATIVE_PATH=/auth
 
 RUN /opt/keycloak/bin/kc.sh build
 

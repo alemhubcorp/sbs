@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { PrismaService } from './prisma.service.js';
 
 const listApprovalsSchema = z.object({
-  status: z.enum(['pending', 'approved', 'rejected']).optional(),
+  status: z.enum(['pending', 'approved', 'rejected', 'needs_more_info']).optional(),
   module: z.string().min(1).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20)
@@ -62,7 +62,7 @@ export class ApprovalService {
   list(query: unknown) {
     const { status, module, page, limit } = listApprovalsSchema.parse(query);
     const where: {
-      status?: 'pending' | 'approved' | 'rejected';
+      status?: 'pending' | 'approved' | 'rejected' | 'needs_more_info';
       module?: string;
     } = {};
 
@@ -119,6 +119,18 @@ export class ApprovalService {
       where: { id: input.approvalId },
       data: {
         status: 'rejected',
+        decidedByUserId: input.decidedByUserId ?? null,
+        decisionComment: input.comment ?? null,
+        decidedAt: new Date()
+      }
+    });
+  }
+
+  markNeedsMoreInfo(input: ApprovalDecisionInput) {
+    return this.prismaService.client.approval.update({
+      where: { id: input.approvalId },
+      data: {
+        status: 'needs_more_info',
         decidedByUserId: input.decidedByUserId ?? null,
         decisionComment: input.comment ?? null,
         decidedAt: new Date()

@@ -39,4 +39,15 @@ export class AdminCoreController {
   ) {
     return this.adminCoreService.rejectApproval(id, body, extractRequestAuditContext(request), authContext!);
   }
+
+  @Post('approvals/:id/request-more-info')
+  @RequirePermissions('approval.manage')
+  requestMoreInfo(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: ApiRequestLike,
+    @CurrentAuthContext() authContext: ApiRequestLike['authContext']
+  ) {
+    return this.adminCoreService.requestMoreInfo(id, body, extractRequestAuditContext(request), authContext!);
+  }
 }

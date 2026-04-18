@@ -1,0 +1,10 @@
+ALTER TABLE "SellerProfile"
+ADD COLUMN IF NOT EXISTS "payoutBeneficiaryName" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutCompanyName" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutBankName" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutAccountNumber" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutIban" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutSwiftBic" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutStatus" TEXT NOT NULL DEFAULT 'unverified',
+ADD COLUMN IF NOT EXISTS "payoutReviewNote" TEXT,
+ADD COLUMN IF NOT EXISTS "payoutVerifiedAt" TIMESTAMP(3);
