@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { getMarketplaceViewer, getRoleLabel, type MarketplaceRole } from '../lib/marketplace-viewer';
+import { getPublicPlatformSettings } from './platform-public-settings';
 import styles from './route-shell.module.css';
 
 type RouteCard = {
@@ -63,6 +64,7 @@ const roleLinks: Record<Exclude<MarketplaceRole, 'guest'>, NavLink[]> = {
   supplier: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Onboarding', href: '/onboarding' },
+    { label: 'Products', href: '/supplier/products' },
     { label: 'RFQ Inbox', href: '/quotes' },
     { label: 'Payouts', href: '/supplier/payouts' },
     { label: 'Deals', href: '/deals' },
@@ -114,23 +116,6 @@ const footerColumns = [
   {
     title: 'Account',
     items: []
-  },
-  {
-    title: 'Commerce',
-    items: [
-      { label: 'Cart', href: '/cart' },
-      { label: 'Checkout', href: '/checkout' },
-      { label: 'Orders', href: '/orders' },
-      { label: 'Notifications', href: '/notifications' }
-    ]
-  },
-  {
-    title: 'Legal',
-    items: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Cookies', href: '/cookies' }
-    ]
   }
 ];
 
@@ -149,13 +134,13 @@ export function RouteShell({ eyebrow, title, description, primary, secondary, ca
 }
 
 async function RouteShellContent({ eyebrow, title, description, primary, secondary, cards = [], children }: RouteShellProps) {
-  const viewer = await getMarketplaceViewer();
+  const [viewer, publicSettings] = await Promise.all([getMarketplaceViewer(), getPublicPlatformSettings()]);
   const navLinks = viewer.role === 'guest' ? publicLinks : roleLinks[viewer.role];
   const roleLabel = viewer.role === 'guest' ? null : getRoleLabel(viewer.role);
   const accountItems = viewer.isAuthenticated
     ? [
         { label: 'Dashboard', href: '/dashboard' },
-        { label: 'Logout', href: '/auth/logout' },
+        { label: 'Logout', href: '/logout' },
         { label: 'Cart', href: '/cart' },
         { label: 'Checkout', href: '/checkout' },
         { label: 'Order History', href: '/orders' },
@@ -164,6 +149,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
         { label: 'Wishlist', href: '/wishlist' },
         ...(viewer.role === 'buyer' || viewer.role === 'admin' ? [{ label: 'Buyer payments', href: '/buyer/payments' }] : []),
         ...(viewer.role === 'supplier' || viewer.role === 'admin' ? [{ label: 'Supplier payouts', href: '/supplier/payouts' }] : []),
+        ...(viewer.role === 'supplier' ? [{ label: 'Supplier products', href: '/supplier/products' }] : []),
         ...(viewer.role === 'logistics' ? [{ label: 'Logistics', href: '/logistics' }] : []),
         ...(viewer.role === 'customs' ? [{ label: 'Customs', href: '/customs' }] : []),
         ...(viewer.role === 'admin'
@@ -187,9 +173,14 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
         { label: 'Track Order', href: '/track-order' },
         { label: 'Wishlist', href: '/wishlist' }
       ];
-  const renderedFooterColumns = footerColumns.map((column) =>
-    column.title === 'Account' ? { ...column, items: accountItems } : column
-  );
+  const renderedFooterColumns = footerColumns.map((column) => {
+    if (column.title === 'Account') {
+      return { ...column, items: accountItems };
+    }
+
+    return column;
+  });
+  const footerLegalLinks = publicSettings?.legalDocuments.filter((item) => item.showInFooter) ?? [];
 
   return (
     <main className={styles.page}>
@@ -217,7 +208,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
               <Link href="/dashboard" className={styles.btnLight}>
                 Dashboard
               </Link>
-              <Link href="/auth/logout" className={styles.btnDark}>
+              <Link href="/logout" className={styles.btnDark}>
                 Logout
               </Link>
             </>
@@ -283,10 +274,24 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
               Your trusted B2B2C international marketplace connecting suppliers, businesses, and consumers worldwide.
             </p>
             <div className={styles.footerContact}>
-              <a href="mailto:[email protected]">✉ <span>[email protected]</span></a>
-              <a href="tel:+17372370456">📞 +1 737 237 0456</a>
-              <span>📍 USA · Kazakhstan · AIFC</span>
+              {publicSettings?.company.supportEmail ? (
+                <a href={`mailto:${publicSettings.company.supportEmail}`}>✉ <span>{publicSettings.company.supportEmail}</span></a>
+              ) : null}
+              {publicSettings?.contacts.phones[0]?.value ? (
+                <a href={`tel:${publicSettings.contacts.phones[0].value}`}>📞 {publicSettings.contacts.phones[0].value}</a>
+              ) : null}
+              {publicSettings?.contacts.addresses[0]?.value ? <span>📍 {publicSettings.contacts.addresses[0].value}</span> : null}
             </div>
+            {publicSettings?.socials.length ? (
+              <div className={styles.footerContact}>
+                {publicSettings.socials.map((item) => (
+                  <a key={item.id} href={item.url} target="_blank" rel="noreferrer">
+                    {item.icon ? `${item.icon} ` : ''}
+                    <span>{item.name || item.label}</span>
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
           {renderedFooterColumns.map((column) => (
             <div className={styles.footerCol} key={column.title}>
@@ -302,11 +307,13 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
           ))}
         </div>
         <div className={styles.footerBottom}>
-          <span>© 2025 United IT Capital. All rights reserved.</span>
+          <span>© 2026 {publicSettings?.company.legalName || 'Safe-Contract'}. All rights reserved.</span>
           <div className={styles.footerLegal}>
-            <Link href="/privacy">Privacy Policy</Link>
-            <Link href="/terms">Terms of Service</Link>
-            <Link href="/cookies">Cookies</Link>
+            {footerLegalLinks.map((item) => (
+              <Link href={item.href} key={item.slug}>
+                {item.footerLabel}
+              </Link>
+            ))}
           </div>
         </div>
       </footer>

@@ -19,24 +19,31 @@ export default async function RegisterPage({ searchParams }: { searchParams?: Se
   return (
     <RouteShell
       eyebrow="Registration"
-      title="Create a real public account."
-      description="Buyers and suppliers register directly here, without dev routes or localhost auth links."
+      title="Open a premium marketplace account on the live production route."
+      description="Buyers and suppliers register directly here, then continue into the same production marketplace used for RFQs, deals, escrow tracking, logistics, and payouts."
       primary={{ label: 'Buyer signup', href: `/register/buyer?returnTo=${encodeURIComponent(returnTo)}` }}
       secondary={{ label: 'Supplier signup', href: `/register/supplier?returnTo=${encodeURIComponent(returnTo)}` }}
       cards={[
         {
           tag: 'Buyer',
           title: 'Create a buyer account',
-          body: 'Register to browse products, create RFQs, pay through escrow, and track orders.',
+          body: 'Register to source products, create RFQs, manage checkout, and track escrow-backed orders from one cabinet.',
           href: `/register/buyer?returnTo=${encodeURIComponent(returnTo)}`,
           foot: 'Open buyer registration →'
         },
         {
           tag: 'Supplier',
           title: 'Create a supplier account',
-          body: 'Register to manage inventory, answer RFQs, ship deals, and receive payouts.',
+          body: 'Register to answer RFQs, move accepted quotes into deals, and manage payout readiness without leaving the live marketplace.',
           href: `/register/supplier?returnTo=${encodeURIComponent(returnTo)}`,
           foot: 'Open supplier registration →'
+        },
+        {
+          tag: 'Trust',
+          title: 'Production-safe account entry',
+          body: 'The signup flow uses the live domain, valid auth routing, and a clean return path into the correct post-login cabinet.',
+          href: `/signin?returnTo=${encodeURIComponent(returnTo)}`,
+          foot: 'Open sign in →'
         }
       ]}
     >

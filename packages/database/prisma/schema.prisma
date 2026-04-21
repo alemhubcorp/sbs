@@ -101,6 +101,7 @@ model User {
   contractVersions ContractVersion[]
   documents        Document[]
   notifications    Notification[]
+  consentRecords   ConsentRecord[]
   requestedApprovals Approval[]      @relation("ApprovalRequestedBy")
   decidedApprovals   Approval[]      @relation("ApprovalDecidedBy")
   operationalAssignments OperationalAssignment[]
@@ -177,6 +178,9 @@ model BuyerProfile {
   retailOrders RetailOrder[]
   wholesaleRfqs WholesaleRfq[]
   wholesaleDeals WholesaleDeal[]
+  wonAuctions ProductAuction[] @relation("ProductAuctionWinner")
+  auctionBids ProductAuctionBid[]
+  preorderReservations ProductPreorderReservation[]
 
   @@index([userId])
   @@index([tenantId])
@@ -206,8 +210,23 @@ model Product {
   sku             String        @unique
   name            String
   description     String?
+  seoTitle        String?
+  metaDescription String?
+  localizedContent Json?
   status          ProductStatus @default(draft)
   targetMarket    ProductTargetMarket @default(both)
+  imageUrls       Json?
+  availabilityStatus ProductAvailabilityStatus @default(in_stock)
+  inventoryQuantity Int @default(0)
+  leadTimeDays    Int?
+  minimumOrderQuantity Int @default(1)
+  compareAtAmountMinor Int?
+  salePriceMinor  Int?
+  saleStartsAt    DateTime?
+  saleEndsAt      DateTime?
+  isPreorderEnabled Boolean @default(false)
+  preorderReleaseAt DateTime?
+  preorderDepositAmountMinor Int?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -215,10 +234,13 @@ model Product {
   category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   prices        ProductPrice[]
   orderItems    RetailOrderItem[]
+  auction       ProductAuction?
+  preorderReservations ProductPreorderReservation[]
 
   @@index([sellerProfileId])
   @@index([categoryId])
   @@index([status])
+  @@index([availabilityStatus])
 }
 
 model ProductPrice {
@@ -233,6 +255,66 @@ model ProductPrice {
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+}
+
+model ProductAuction {
+  id                 String               @id @default(cuid())
+  productId          String               @unique
+  status             ProductAuctionStatus @default(active)
+  currency           String
+  startingBidMinor   Int
+  reserveBidMinor    Int?
+  currentBidMinor    Int?
+  startsAt           DateTime
+  endsAt             DateTime
+  winnerBuyerProfileId String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  product            Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  winnerBuyerProfile BuyerProfile?        @relation("ProductAuctionWinner", fields: [winnerBuyerProfileId], references: [id], onDelete: SetNull)
+  bids               ProductAuctionBid[]
+
+  @@index([status])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([winnerBuyerProfileId])
+}
+
+model ProductAuctionBid {
+  id             String         @id @default(cuid())
+  auctionId      String
+  buyerProfileId String
+  amountMinor    Int
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  auction        ProductAuction @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+  buyerProfile   BuyerProfile   @relation(fields: [buyerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([auctionId])
+  @@index([buyerProfileId])
+  @@index([amountMinor])
+}
+
+model ProductPreorderReservation {
+  id             String               @id @default(cuid())
+  productId      String
+  buyerProfileId String
+  quantity       Int
+  unitAmountMinor Int
+  totalAmountMinor Int
+  status         ProductPreorderStatus @default(reserved)
+  note           String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerProfile   BuyerProfile         @relation(fields: [buyerProfileId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([buyerProfileId])
+  @@index([status])
 }
 
 model RetailOrder {
@@ -838,6 +920,32 @@ model AdminSetting {
   @@index([updatedAt])
 }
 
+model ConsentRecord {
+  id              String   @id @default(cuid())
+  userId          String?
+  email           String?
+  flow            String
+  documentSlug    String
+  documentTitle   String
+  documentVersion String
+  entityType      String?
+  entityId        String?
+  ipAddress       String?
+  userAgent       String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([email])
+  @@index([flow])
+  @@index([documentSlug, documentVersion])
+  @@index([entityType, entityId])
+  @@map("consent_records")
+}
+
 model Approval {
   id                String         @id @default(cuid())
   module            String
@@ -939,6 +1047,29 @@ enum ProductTargetMarket {
   b2c
   b2b
   both
+}
+
+enum ProductAvailabilityStatus {
+  in_stock
+  low_stock
+  preorder
+  out_of_stock
+  discontinued
+}
+
+enum ProductAuctionStatus {
+  scheduled
+  active
+  closed
+  awarded
+  cancelled
+}
+
+enum ProductPreorderStatus {
+  reserved
+  confirmed
+  cancelled
+  fulfilled
 }
 
 enum RetailOrderStatus {

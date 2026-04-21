@@ -1,56 +1,38 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { RouteShell } from '../../route-shell';
-import { RequestQuoteButton } from '../../core-flow-client';
+import { AuctionBidPanel, PreorderReservationPanel, RequestQuoteButton } from '../../core-flow-client';
 import { AddToCartButton } from '../../retail-commerce-client';
 import { getMarketplaceViewer } from '../../../lib/marketplace-viewer';
+import {
+  availabilityLabel,
+  currentProductAmount,
+  formatMoney,
+  getCatalogProductBySlug,
+  isSaleActive
+} from '../../catalog-data';
 import styles from '../../core-flow.module.css';
 
-const internalApiBaseUrl =
-  process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const { product } = await getCatalogProductBySlug(slug);
 
-type Product = {
-  id: string;
-  slug: string;
-  name: string;
-  description?: string | null;
-  targetMarket: string;
-  status: string;
-  prices?: Array<{ amountMinor: number; currency: string }>;
-  category?: { name?: string | null };
-  sellerProfile?: { displayName?: string | null };
-};
-
-async function getPublicProducts() {
-  try {
-    const response = await fetch(`${internalApiBaseUrl}/api/catalog/public/products`, { cache: 'no-store' });
-    if (!response.ok) {
-      return { products: [] as Product[], error: `Catalog request failed with status ${response.status}` };
-    }
-
-    return { products: (await response.json()) as Product[], error: null };
-  } catch {
-    return { products: [], error: 'Catalog API is unavailable.' };
-  }
-}
-
-function priceLabel(product: Product) {
-  const price = product.prices?.[0];
-  if (!price) {
-    return 'Request price';
+  if (!product) {
+    return {
+      title: 'Product not found'
+    };
   }
 
-  return `${price.currency} ${(price.amountMinor / 100).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
+  return {
+    title: product.seoTitle || product.name,
+    description: product.metaDescription || product.description || undefined
+  };
 }
 
 export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { products, error } = await getPublicProducts();
-  const viewer = await getMarketplaceViewer();
-  const product = products.find((item) => item.slug === slug);
+  const [{ product, error }, viewer] = await Promise.all([getCatalogProductBySlug(slug), getMarketplaceViewer()]);
 
   if (error) {
     return (
@@ -70,36 +52,79 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
+  const currentPrice = currentProductAmount(product);
+  const currency = product.prices?.[0]?.currency ?? 'USD';
+  const saleActive = isSaleActive(product);
+
   return (
     <RouteShell
       eyebrow="Product detail"
       title={product.name}
-      description="Open the product card, create an RFQ, and continue into the request board."
-      primary={{ label: 'Open RFQ Board', href: '/requests' }}
-      secondary={{ label: 'Back to Products', href: '/products' }}
+      description="Use the live product card for retail checkout, wholesale RFQ, auction bidding, or preorder reservation without leaving the production marketplace."
+      primary={{ label: 'All Products', href: '/products' }}
+      secondary={{ label: product.targetMarket === 'b2b' ? 'Open RFQ Board' : 'Open Cart', href: product.targetMarket === 'b2b' ? '/requests' : '/cart' }}
     >
       <div className={styles.grid}>
         <article className={styles.detailCard}>
-          <div className={`${styles.pill} ${styles.pillTeal}`}>
-            {product.targetMarket === 'b2b' ? 'B2B' : product.targetMarket === 'b2c' ? 'B2C' : 'Both'}
+          {product.imageUrls?.[0] ? <img src={product.imageUrls[0]} alt={product.name} className={styles.detailImage} /> : null}
+          <div className={styles.buttonRow}>
+            <div className={`${styles.pill} ${product.targetMarket === 'b2b' ? styles.pillBlue : product.targetMarket === 'b2c' ? styles.pillAmber : styles.pillTeal}`}>
+              {product.targetMarket === 'b2b' ? 'B2B' : product.targetMarket === 'b2c' ? 'B2C' : 'B2B / B2C'}
+            </div>
+            <span className={`${styles.status} ${product.availabilityStatus === 'in_stock' ? styles.statusSuccess : styles.statusWarning}`}>
+              {availabilityLabel(product.availabilityStatus)}
+            </span>
           </div>
           <div className={styles.sectionTitle}>{product.name}</div>
           <div className={styles.inlineMeta}>
-            <div>Slug: {product.slug}</div>
             <div>Category: {product.category?.name ?? 'Uncategorized'}</div>
-            <div>Seller: {product.sellerProfile?.displayName ?? 'Unknown seller'}</div>
-            <div>Price: {priceLabel(product)}</div>
-            <div>Status: {product.status}</div>
+            <div>Supplier: {product.sellerProfile?.displayName ?? 'Unknown seller'}</div>
+            <div>Price: {formatMoney(currentPrice, currency)}</div>
+            <div>MOQ: {product.minimumOrderQuantity ?? 1}</div>
+            <div>Inventory: {product.inventoryQuantity ?? 0}</div>
+            {product.leadTimeDays ? <div>Lead time: {product.leadTimeDays} days</div> : null}
+            {product.auction ? <div>Auction ends: {new Date(product.auction.endsAt).toLocaleString()}</div> : null}
+            {product.preorderReleaseAt ? <div>Release: {new Date(product.preorderReleaseAt).toLocaleDateString()}</div> : null}
           </div>
+          {saleActive && product.compareAtAmountMinor ? (
+            <div className={styles.successBox}>
+              Sale active: {formatMoney(product.compareAtAmountMinor, currency)} → {formatMoney(currentPrice, currency)}
+            </div>
+          ) : null}
           {product.description ? <div className={styles.subtle}>{product.description}</div> : null}
-          {product.targetMarket !== 'b2b' ? <AddToCartButton product={product} viewerRole={viewer.role} /> : null}
+
+          {!product.isPreorderEnabled && product.availabilityStatus !== 'preorder' && product.targetMarket !== 'b2b' ? (
+            <AddToCartButton product={product} viewerRole={viewer.role} />
+          ) : null}
           {product.targetMarket !== 'b2c' ? <RequestQuoteButton product={product} viewerRole={viewer.role} /> : null}
+          {product.auction ? <AuctionBidPanel product={product} viewerRole={viewer.role} /> : null}
+          {(product.isPreorderEnabled || product.availabilityStatus === 'preorder') ? (
+            <PreorderReservationPanel product={product} viewerRole={viewer.role} />
+          ) : null}
         </article>
+
         <div className={styles.sectionCard}>
-          <div className={styles.sectionTitle}>Next step</div>
-          <div className={styles.subtle}>
-            <p>After the RFQ is created, open the request board to see it saved under the current session.</p>
-            <Link href="/requests">Go to Requests →</Link>
+          <div className={styles.sectionTitle}>Commercial rails</div>
+          <div className={styles.stack}>
+            <div className={styles.subtle}>
+              Retail inventory uses the cart and checkout flow. Wholesale inventory continues through RFQ, quote, deal, escrow, and shipping.
+            </div>
+            <div className={styles.inlineMeta}>
+              <span>Auctions: {product.auction ? 'Active for this product' : 'Not active'}</span>
+              <span>Pre-order: {product.isPreorderEnabled || product.availabilityStatus === 'preorder' ? 'Open' : 'Closed'}</span>
+              <span>Sale pricing: {saleActive ? 'Active' : 'Standard pricing'}</span>
+            </div>
+            <div className={styles.buttonRow}>
+              <Link href="/auctions" className={styles.buttonSecondary}>
+                View auctions
+              </Link>
+              <Link href="/preorders" className={styles.buttonSecondary}>
+                View pre-orders
+              </Link>
+              <Link href="/products/wholesale" className={styles.buttonSecondary}>
+                Wholesale listing
+              </Link>
+            </div>
           </div>
         </div>
       </div>

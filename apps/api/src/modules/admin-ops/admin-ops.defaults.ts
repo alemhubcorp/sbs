@@ -10,7 +10,12 @@ export const adminSettingKeys = {
   compliance: 'compliance:default',
   kycDocumentRequirements: 'kyc:document-requirements',
   email: 'email:default',
-  paymentRouting: 'payment-routing:default'
+  paymentRouting: 'payment-routing:default',
+  governanceAuth: 'governance:auth',
+  publicSocialLinks: 'public:social-links',
+  publicContacts: 'public:contact-settings',
+  legalDocuments: 'legal:documents',
+  aiContentAssistant: 'ai:content-assistant'
 } as const;
 
 export const defaultAdminSettings = [
@@ -31,7 +36,7 @@ export const defaultAdminSettings = [
       clientId: '',
       clientSecret: '',
       apiBaseUrl: 'https://api.airwallex.com',
-      callbackUrl: '/api/platform/webhooks/airwallex',
+      callbackUrl: '/api/payments/webhooks/airwallex',
       returnUrl: '/orders',
       statusEndpoint: 'https://api.airwallex.com/status',
       notes: 'Enable live credentials from admin settings when ready.'
@@ -77,7 +82,7 @@ export const defaultAdminSettings = [
       clientId: '',
       clientSecret: '',
       apiBaseUrl: '',
-      callbackUrl: '/api/platform/webhooks/bank-transfer',
+      callbackUrl: '/api/payments/webhooks/bank_transfer',
       returnUrl: '/orders',
       statusEndpoint: '',
       notes: 'Used for SWIFT / IBAN / standard bank transfer instructions.'
@@ -229,6 +234,19 @@ export const defaultAdminSettings = [
     }
   },
   {
+    key: adminSettingKeys.aiContentAssistant,
+    section: 'ai',
+    value: {
+      enabled: false,
+      provider: 'openai',
+      model: 'gpt-5.2',
+      apiBaseUrl: 'https://api.openai.com/v1/responses',
+      apiKey: '',
+      translationLanguages: ['en', 'ru', 'kk', 'tr', 'zh-CN'],
+      notes: 'Supplier-side product copy assistant. Suggestions never overwrite form fields until the user applies them.'
+    }
+  },
+  {
     key: adminSettingKeys.paymentRouting,
     section: 'payment-routing',
     value: {
@@ -238,6 +256,130 @@ export const defaultAdminSettings = [
       swift: 'internal_manual',
       iban_invoice: 'internal_manual',
       manual: 'internal_manual'
+    }
+  },
+  {
+    key: adminSettingKeys.governanceAuth,
+    section: 'governance',
+    value: {
+      emailVerificationRequired: false,
+      registrationDocumentSlugs: ['terms', 'privacy'],
+      supplierRegistrationDocumentSlugs: ['terms', 'privacy', 'seller-policy'],
+      checkoutDocumentSlugs: ['terms', 'privacy'],
+      dealFundingDocumentSlugs: ['terms', 'privacy']
+    }
+  },
+  {
+    key: adminSettingKeys.publicSocialLinks,
+    section: 'public',
+    value: {
+      items: [
+        {
+          id: 'linkedin',
+          name: 'LinkedIn',
+          url: 'https://www.linkedin.com',
+          icon: 'in',
+          logoUrl: '',
+          active: true,
+          displayOrder: 1
+        },
+        {
+          id: 'x',
+          name: 'X',
+          url: 'https://x.com',
+          icon: 'X',
+          logoUrl: '',
+          active: true,
+          displayOrder: 2
+        }
+      ]
+    }
+  },
+  {
+    key: adminSettingKeys.publicContacts,
+    section: 'public',
+    value: {
+      addresses: [
+        {
+          id: 'hq',
+          label: 'Head office',
+          value: '1 RuFlo Plaza, Commerce City',
+          active: true,
+          displayOrder: 1
+        }
+      ],
+      phones: [
+        {
+          id: 'support',
+          label: 'Support',
+          value: '+1 555 0100',
+          active: true,
+          displayOrder: 1
+        }
+      ]
+    }
+  },
+  {
+    key: adminSettingKeys.legalDocuments,
+    section: 'legal',
+    value: {
+      documents: [
+        {
+          slug: 'terms',
+          title: 'Terms & Conditions',
+          footerLabel: 'Terms & Conditions',
+          summary: 'Marketplace access, order terms, escrow rules, and dispute handling.',
+          content:
+            'These Terms & Conditions govern access to the RuFlo marketplace, supplier listings, buyer orders, RFQ activity, escrow-backed settlements, dispute handling, and role-based obligations.',
+          version: '2026.04',
+          active: true,
+          showInFooter: true
+        },
+        {
+          slug: 'returns',
+          title: 'Return Policy',
+          footerLabel: 'Return Policy',
+          summary: 'Return eligibility, inspection windows, and refund handling.',
+          content:
+            'The Return Policy defines inspection periods, non-returnable categories, supplier obligations, buyer rejection windows, and how approved refunds are processed through the marketplace and escrow flows.',
+          version: '2026.04',
+          active: true,
+          showInFooter: true
+        },
+        {
+          slug: 'support-policy',
+          title: 'Support Policy',
+          footerLabel: 'Support Policy',
+          summary: 'Response windows, escalation paths, and support channel coverage.',
+          content:
+            'The Support Policy covers platform support channels, critical issue triage, onboarding support, payment review coordination, and escalation timelines for active commercial transactions.',
+          version: '2026.04',
+          active: true,
+          showInFooter: true
+        },
+        {
+          slug: 'privacy',
+          title: 'Privacy Policy',
+          footerLabel: 'Privacy Policy',
+          summary: 'Data processing, KYC/KYB records, cookies, and communication preferences.',
+          content:
+            'The Privacy Policy explains how RuFlo processes account data, KYC/KYB records, order and deal metadata, payment references, communication preferences, and operational logs.',
+          version: '2026.04',
+          active: true,
+          showInFooter: true
+        },
+        {
+          slug: 'seller-policy',
+          title: 'Seller Policy',
+          footerLabel: 'Seller Policy',
+          summary: 'Supplier obligations, listing quality, payout readiness, and settlement compliance.',
+          content:
+            'The Seller Policy defines supplier conduct, product accuracy standards, shipping readiness, payout account verification, compliance obligations, and seller-side dispute responsibilities.',
+          version: '2026.04',
+          active: true,
+          showInFooter: true
+        }
+      ]
     }
   }
 ] satisfies Array<{
@@ -311,6 +453,8 @@ export function sanitizeAdminSettingRow(row: AdminSettingRow): AdminSettingRow {
   const secretKeys =
     row.key === adminSettingKeys.email
       ? ['smtpPassword']
+      : row.key === adminSettingKeys.aiContentAssistant
+        ? ['apiKey']
       : row.key.startsWith('payment-provider:')
         ? ['secretKey', 'webhookSecret', 'clientSecret']
         : [];

@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { consumeLoginState, exchangeAuthorizationCode, persistSession } from '../../../lib/auth';
-
-function getPublicAppUrl(host?: string | null) {
-  const requestHost = host?.split(',')[0]?.trim();
-  if (requestHost && /^(localhost|127\.0\.0\.1|::1)(:\d+)?$/i.test(requestHost)) {
-    return `http://${requestHost}/admin`;
-  }
-
-  return process.env.ADMIN_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? process.env.APP_URL ?? 'http://localhost:3002';
-}
+import {
+  adminCookieNames,
+  buildAdminAppUrl,
+  exchangeAuthorizationCode,
+  getAdminCookieOptions
+} from '../../../lib/auth';
 
 function buildRedirectUrl(appUrl: string, targetPath: string) {
   const url = new URL(appUrl);
@@ -23,9 +19,11 @@ function buildRedirectUrl(appUrl: string, targetPath: string) {
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   const returnedState = request.nextUrl.searchParams.get('state');
-  const { state, returnTo } = await consumeLoginState();
   const requestHost = request.headers.get('host');
-  const appUrl = getPublicAppUrl(requestHost);
+  const appUrl = buildAdminAppUrl(requestHost);
+  const state = request.cookies.get(adminCookieNames.state)?.value ?? null;
+  const returnTo = request.cookies.get(adminCookieNames.returnTo)?.value ?? '/';
+  const cookieOptions = getAdminCookieOptions(requestHost);
 
   if (!code || !returnedState || !state || returnedState !== state) {
     return NextResponse.redirect(buildRedirectUrl(appUrl, '/?auth=invalid-state'));
@@ -33,10 +31,22 @@ export async function GET(request: NextRequest) {
 
   try {
     const session = await exchangeAuthorizationCode(code, requestHost);
-    await persistSession(session);
+    const response = NextResponse.redirect(buildRedirectUrl(appUrl, returnTo));
+
+    response.cookies.delete(adminCookieNames.state);
+    response.cookies.delete(adminCookieNames.returnTo);
+    response.cookies.set(adminCookieNames.accessToken, session.accessToken, cookieOptions);
+    response.cookies.set(adminCookieNames.refreshToken, session.refreshToken, cookieOptions);
+    response.cookies.set(adminCookieNames.expiresAt, String(session.expiresAt), cookieOptions);
+
+    if (session.idToken) {
+      response.cookies.set(adminCookieNames.idToken, session.idToken, cookieOptions);
+    } else {
+      response.cookies.delete(adminCookieNames.idToken);
+    }
+
+    return response;
   } catch {
     return NextResponse.redirect(buildRedirectUrl(appUrl, '/?auth=callback-error'));
   }
-
-  return NextResponse.redirect(buildRedirectUrl(appUrl, returnTo));
 }

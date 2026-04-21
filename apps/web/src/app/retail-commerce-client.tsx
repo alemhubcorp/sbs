@@ -249,7 +249,7 @@ function paymentProviderLabel(provider?: RetailPaymentRecord['provider'] | null)
 }
 
 function paymentProviderForMethod(method: RetailPaymentRecord['method']) {
-  return method === 'manual' ? 'internal_manual' : 'airwallex';
+  return method === 'card' || method === 'qr' ? 'airwallex' : 'internal_manual';
 }
 
 function paymentStatusTone(status?: RetailPaymentRecord['status'] | null) {
@@ -534,7 +534,23 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
   const [orderState, setOrderState] = useState<LoadState<RetailOrder | null>>(loadingState(null));
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [publicSettings, setPublicSettings] = useState<null | {
+    governance?: {
+      consent?: {
+        checkoutDocumentSlugs?: string[];
+      };
+    };
+    legalDocuments?: Array<{ slug: string; title: string; version: string; href: string }>;
+  }>(null);
+  const [acceptedCheckoutConsents, setAcceptedCheckoutConsents] = useState<Record<string, boolean>>({});
   const [paymentMethod, setPaymentMethod] = useState<RetailPaymentRecord['method']>('card');
+  const [cardForm, setCardForm] = useState({
+    cardholderName: '',
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    cvc: ''
+  });
   const [address, setAddress] = useState({
     name: '',
     line1: '',
@@ -569,6 +585,38 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
     void loadCart();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch('/api/platform/public-settings', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return (await response.json()) as {
+          governance?: {
+            consent?: {
+              checkoutDocumentSlugs?: string[];
+            };
+          };
+          legalDocuments?: Array<{ slug: string; title: string; version: string; href: string }>;
+        };
+      })
+      .then((data) => {
+        if (!cancelled && data) {
+          setPublicSettings(data);
+        }
+      })
+      .catch(() => {
+        // Backend will still validate consent.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function checkout() {
     if (!orderState.data) {
       setError('No cart is available.');
@@ -578,13 +626,28 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
     setSuccess(null);
     setError(null);
 
+    const consentDocuments = (publicSettings?.legalDocuments ?? []).filter((document) =>
+      (publicSettings?.governance?.consent?.checkoutDocumentSlugs ?? []).includes(document.slug)
+    );
+
+    for (const document of consentDocuments) {
+      if (!acceptedCheckoutConsents[document.slug]) {
+        setError(`Consent is required for ${document.title}.`);
+        return;
+      }
+    }
+
     try {
       await retailJson<RetailOrder>(`orders/${orderState.data.id}/checkout`, {
         method: 'POST',
         body: JSON.stringify({
           ...address,
           paymentMethod,
-          paymentProvider: paymentProviderForMethod(paymentMethod)
+          paymentProvider: paymentProviderForMethod(paymentMethod),
+          consents: consentDocuments.map((document) => ({
+            documentSlug: document.slug,
+            version: document.version
+          }))
         })
       });
       setSuccess('Checkout created. Payment instructions are ready.');
@@ -610,6 +673,16 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
       return;
     }
 
+    const paymentRecordMethod = orderState.data.paymentRecords?.[0]?.method ?? paymentMethod;
+
+    if (
+      paymentRecordMethod === 'card' &&
+      (!cardForm.cardholderName || !cardForm.cardNumber || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.cvc)
+    ) {
+      setError('Complete the card form before submitting payment.');
+      return;
+    }
+
     setSuccess(null);
     setError(null);
 
@@ -617,7 +690,9 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
       await retailJson<RetailOrder>(`orders/${orderState.data.id}/pay`, {
         method: 'POST',
         body: JSON.stringify({
-          note: 'Buyer submitted payment from the checkout flow.'
+          note:
+            paymentRecordMethod === 'card' ? 'Buyer submitted card payment from the checkout flow.' : 'Buyer submitted payment from the checkout flow.',
+          ...(paymentRecordMethod === 'card' ? { card: cardForm } : {})
         })
       });
       setSuccess('Payment submitted. Awaiting confirmation.');
@@ -649,6 +724,9 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
   }
 
   const order = orderState.data;
+  const checkoutConsentDocuments = (publicSettings?.legalDocuments ?? []).filter((document) =>
+    (publicSettings?.governance?.consent?.checkoutDocumentSlugs ?? []).includes(document.slug)
+  );
 
   return (
     <div className={styles.sectionCard}>
@@ -720,7 +798,7 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
               <div className={styles.stack}>
                 <div className={styles.subtle}>Choose payment method</div>
                 <div className={styles.buttonRow}>
-                  {(['card', 'qr', 'bank_transfer', 'manual'] as const).map((method) => (
+                  {(['card', 'qr', 'bank_transfer', 'swift', 'manual'] as const).map((method) => (
                     <button
                       key={method}
                       type="button"
@@ -733,14 +811,96 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
                 </div>
                 <div className={styles.subtle}>
                   {paymentMethod === 'card'
-                    ? 'Card checkout will create an Airwallex-ready payment session.'
+                    ? 'Card checkout will create an Airwallex-ready payment session with masked card submission.'
                     : paymentMethod === 'qr'
                       ? 'QR payment will create scan-ready instructions and a payment reference.'
                       : paymentMethod === 'bank_transfer'
                         ? 'Bank transfer will show beneficiary, bank, and reference instructions.'
+                        : paymentMethod === 'swift'
+                          ? 'SWIFT transfer will show beneficiary, IBAN, SWIFT/BIC, and transfer references.'
                         : 'Manual payment will wait for admin or supplier confirmation.'}
                 </div>
+                {paymentMethod === 'card' ? (
+                  <div className={styles.fieldGrid}>
+                    <div className={styles.field}>
+                      <label htmlFor="cardholder-name">Cardholder name</label>
+                      <input
+                        id="cardholder-name"
+                        value={cardForm.cardholderName}
+                        onChange={(event) => setCardForm((current) => ({ ...current, cardholderName: event.target.value }))}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="card-number">Card number</label>
+                      <input
+                        id="card-number"
+                        inputMode="numeric"
+                        value={cardForm.cardNumber}
+                        onChange={(event) => setCardForm((current) => ({ ...current, cardNumber: event.target.value }))}
+                        placeholder="4111 1111 1111 1111"
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="card-expiry-month">Expiry month</label>
+                      <input
+                        id="card-expiry-month"
+                        inputMode="numeric"
+                        value={cardForm.expiryMonth}
+                        onChange={(event) => setCardForm((current) => ({ ...current, expiryMonth: event.target.value }))}
+                        placeholder="12"
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="card-expiry-year">Expiry year</label>
+                      <input
+                        id="card-expiry-year"
+                        inputMode="numeric"
+                        value={cardForm.expiryYear}
+                        onChange={(event) => setCardForm((current) => ({ ...current, expiryYear: event.target.value }))}
+                        placeholder="2028"
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="card-cvc">CVC</label>
+                      <input
+                        id="card-cvc"
+                        inputMode="numeric"
+                        value={cardForm.cvc}
+                        onChange={(event) => setCardForm((current) => ({ ...current, cvc: event.target.value }))}
+                        placeholder="123"
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </div>
+              {checkoutConsentDocuments.length ? (
+                <div className={styles.sectionCard} style={{ padding: 12, background: '#fff' }}>
+                  <div className={styles.subtle}>Required consent</div>
+                  <div className={styles.stack}>
+                    {checkoutConsentDocuments.map((document) => (
+                      <label key={document.slug} className={styles.subtle} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <input
+                          type="checkbox"
+                          checked={acceptedCheckoutConsents[document.slug] ?? false}
+                          onChange={(event) =>
+                            setAcceptedCheckoutConsents((current) => ({
+                              ...current,
+                              [document.slug]: event.target.checked
+                            }))
+                          }
+                        />
+                        <span>
+                          I agree to the{' '}
+                          <Link href={document.href} target="_blank">
+                            {document.title}
+                          </Link>
+                          .
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               <div className={styles.buttonRow} style={{ marginTop: 16 }}>
                 <button type="button" className={styles.button} onClick={() => void checkout()} disabled={orderState.loading}>
                   Place Order

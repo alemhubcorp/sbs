@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+﻿import type { ReactNode } from 'react';
 
 export const metadata = {
   title: 'Safe-Contract - Global B2B2C Trade Platform',

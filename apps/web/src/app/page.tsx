@@ -1,4 +1,5 @@
 import { MarketplaceHome } from './marketplace-home';
+import { getPublicPlatformSettings } from './platform-public-settings';
 
 const internalApiBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -43,7 +44,7 @@ async function getPublicProducts() {
 }
 
 export default async function HomePage() {
-  const [healthStatus, products] = await Promise.all([getHealth(), getPublicProducts()]);
+  const [healthStatus, products, publicSettings] = await Promise.all([getHealth(), getPublicProducts(), getPublicPlatformSettings()]);
 
-  return <MarketplaceHome healthStatus={healthStatus} products={products} />;
+  return <MarketplaceHome healthStatus={healthStatus} products={products} publicSettings={publicSettings} />;
 }

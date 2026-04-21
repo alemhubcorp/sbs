@@ -209,10 +209,27 @@ export class ContractCoreRepository {
     });
   }
 
-  listContractRfqsForUser(userId: string) {
+  listContractRfqsForBuyer(userId: string) {
     return this.prismaService.client.contractRfq.findMany({
       where: {
-        OR: [{ buyerUserId: userId }, { supplierUserId: userId }]
+        buyerUserId: userId
+      },
+      include: this.contractRfqInclude,
+      orderBy: [
+        {
+          createdAt: 'desc'
+        },
+        {
+          id: 'desc'
+        }
+      ]
+    });
+  }
+
+  listContractRfqsForSupplier(userId: string) {
+    return this.prismaService.client.contractRfq.findMany({
+      where: {
+        supplierUserId: userId
       },
       include: this.contractRfqInclude,
       orderBy: [

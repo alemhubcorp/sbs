@@ -643,3 +643,159 @@ export async function testEmailConfigurationAction(_prevStateOrFormData: unknown
     };
   }
 }
+
+function collectIndexedRecords(
+  formData: FormData,
+  prefix: string,
+  fields: string[],
+  count: number
+) {
+  const records: Array<Record<string, string | boolean | number>> = Array.from({ length: count }, (_, index) => {
+    const record: Record<string, string> = {};
+    for (const field of fields) {
+      record[field] = String(formData.get(`${prefix}_${field}_${index}`) ?? '').trim();
+    }
+
+    return {
+      ...record,
+      active: String(formData.get(`${prefix}_active_${index}`) ?? 'off') === 'on',
+      displayOrder: Number(formData.get(`${prefix}_displayOrder_${index}`) ?? index + 1)
+    };
+  });
+
+  return records.filter((record) => fields.some((field) => typeof record[field] === 'string' && String(record[field]).length > 0));
+}
+
+export async function updateGovernanceSettingsAction(formData: FormData) {
+  await sendJson(
+    '/api/admin/settings/governance:auth',
+    'PUT',
+    {
+      section: 'governance',
+      value: {
+        emailVerificationRequired: String(formData.get('emailVerificationRequired') ?? 'off') === 'on'
+      }
+    },
+    ['/admin/settings/platform']
+  );
+}
+
+export async function updateAiContentSettingsAction(formData: FormData) {
+  const languages = String(formData.get('translationLanguages') ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+
+  await sendJson(
+    '/api/admin/settings/ai:content-assistant',
+    'PUT',
+    {
+      section: 'ai',
+      value: {
+        enabled: String(formData.get('enabled') ?? 'off') === 'on',
+        provider: String(formData.get('provider') ?? 'openai').trim(),
+        model: String(formData.get('model') ?? '').trim(),
+        apiBaseUrl: String(formData.get('apiBaseUrl') ?? '').trim(),
+        apiKey: String(formData.get('apiKey') ?? '').trim() || undefined,
+        translationLanguages: languages,
+        notes: String(formData.get('notes') ?? '').trim()
+      }
+    },
+    ['/admin/settings/platform']
+  );
+}
+
+export async function updateSocialLinksSettingsAction(formData: FormData) {
+  const items = collectIndexedRecords(formData, 'social', ['id', 'name', 'url', 'icon', 'logoUrl'], 6);
+
+  await sendJson(
+    '/api/admin/settings/public:social-links',
+    'PUT',
+    {
+      section: 'public',
+      value: {
+        items
+      }
+    },
+    ['/admin/settings/platform']
+  );
+}
+
+export async function updateContactSettingsAction(formData: FormData) {
+  const addresses = collectIndexedRecords(formData, 'address', ['id', 'label', 'value'], 6);
+  const phones = collectIndexedRecords(formData, 'phone', ['id', 'label', 'value'], 6);
+
+  await sendJson(
+    '/api/admin/settings/public:contact-settings',
+    'PUT',
+    {
+      section: 'public',
+      value: {
+        addresses,
+        phones
+      }
+    },
+    ['/admin/settings/platform']
+  );
+}
+
+export async function updateLegalDocumentsAction(formData: FormData) {
+  const documents = ['terms', 'returns', 'support-policy', 'privacy', 'seller-policy'].map((slug) => ({
+    slug,
+    title: String(formData.get(`${slug}_title`) ?? '').trim(),
+    footerLabel: String(formData.get(`${slug}_footerLabel`) ?? '').trim(),
+    summary: String(formData.get(`${slug}_summary`) ?? '').trim(),
+    content: String(formData.get(`${slug}_content`) ?? '').trim(),
+    version: String(formData.get(`${slug}_version`) ?? '').trim(),
+    active: String(formData.get(`${slug}_active`) ?? 'off') === 'on',
+    showInFooter: String(formData.get(`${slug}_showInFooter`) ?? 'off') === 'on'
+  }));
+
+  await sendJson(
+    '/api/admin/settings/legal:documents',
+    'PUT',
+    {
+      section: 'legal',
+      value: {
+        documents
+      }
+    },
+    ['/admin/settings/legal']
+  );
+}
+
+export async function createManagedAccountAction(formData: FormData) {
+  const roleIds = formData
+    .getAll('roleIds')
+    .map((value) => String(value))
+    .filter((value) => value.length > 0);
+
+  await sendJson(
+    '/api/identity/accounts',
+    'POST',
+    {
+      email: String(formData.get('email') ?? '').trim(),
+      firstName: String(formData.get('firstName') ?? '').trim(),
+      lastName: String(formData.get('lastName') ?? '').trim(),
+      password: String(formData.get('password') ?? ''),
+      status: String(formData.get('status') ?? 'active'),
+      accountType: String(formData.get('accountType') ?? 'user'),
+      roleIds
+    },
+    ['/admin/users']
+  );
+}
+
+export async function updateManagedUserStatusAction(formData: FormData) {
+  const userId = String(formData.get('userId') ?? '');
+  const status = String(formData.get('status') ?? 'disabled');
+
+  await sendJson(
+    `/api/identity/users/${userId}/status`,
+    'PUT',
+    {
+      status
+    },
+    ['/admin/users']
+  );
+}

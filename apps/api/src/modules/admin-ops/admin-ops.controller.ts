@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Put, Query, Req } from '@nestjs/common';
 import { CurrentAuthContext } from '../../app/current-auth-context.decorator.js';
 import { extractRequestAuditContext, type ApiRequestLike } from '../../app/auth-context.js';
+import { Public } from '../../app/public.decorator.js';
 import { RequirePermissions } from '../../app/permissions.decorator.js';
 import { AdminOpsService } from './admin-ops.service.js';
 
@@ -50,6 +51,18 @@ export class EmailSettingsController {
 @RequirePermissions('payment.read')
 export class PlatformOpsController {
   constructor(@Inject(AdminOpsService) private readonly adminOpsService: AdminOpsService) {}
+
+  @Get('public-settings')
+  @Public()
+  getPublicSettings() {
+    return this.adminOpsService.getPublicSettings();
+  }
+
+  @Get('legal-docs/:slug')
+  @Public()
+  getPublicLegalDocument(@Param('slug') slug: string) {
+    return this.adminOpsService.getPublicLegalDocument(slug);
+  }
 
   @Get('payment-config')
   getPaymentConfig(@CurrentAuthContext() authContext: ApiRequestLike['authContext']) {

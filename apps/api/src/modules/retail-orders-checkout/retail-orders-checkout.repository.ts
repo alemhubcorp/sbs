@@ -221,10 +221,13 @@ export class RetailOrdersCheckoutRepository {
   async addItemToCart(authContext: AuthContext, input: { productId: string; quantity: number }) {
     const buyerProfileId = await this.resolveBuyerProfileId(undefined, authContext);
     const product = await this.loadProduct(input.productId);
+    this.assertRetailPurchasable(product, input.quantity);
     const activePrice = product.prices[0];
     if (!activePrice) {
       throw new ConflictException(`Product ${product.id} does not have an active price.`);
     }
+
+    const unitAmountMinor = this.resolveCurrentAmount(product, activePrice.amountMinor);
 
     const cart = await this.getOrCreateCart(buyerProfileId, product.sellerProfileId, activePrice);
 
@@ -248,8 +251,8 @@ export class RetailOrdersCheckoutRepository {
           retailOrderId: cart.id,
           productId: product.id,
           quantity,
-          unitAmountMinor: product.prices[0]!.amountMinor,
-          lineAmountMinor: product.prices[0]!.amountMinor * quantity,
+          unitAmountMinor,
+          lineAmountMinor: unitAmountMinor * quantity,
           currency: product.prices[0]!.currency,
           productName: product.name,
           productSlug: product.slug
@@ -627,6 +630,7 @@ export class RetailOrdersCheckoutRepository {
       },
       include: {
         sellerProfile: true,
+        auction: true,
         prices: {
           where: {
             isActive: true
@@ -659,6 +663,8 @@ export class RetailOrdersCheckoutRepository {
       throw new ConflictException(`Product ${productId} does not have an active price.`);
     }
 
+    this.assertRetailPurchasable(product, 1);
+
     return {
       ...product,
       prices: [activePrice]
@@ -677,14 +683,70 @@ export class RetailOrdersCheckoutRepository {
         throw new ConflictException(`Product ${item.productId} does not have an active price.`);
       }
 
+      this.assertRetailPurchasable(product, item.quantity);
+      const unitAmountMinor = this.resolveCurrentAmount(product, activePrice.amountMinor);
+
       return {
         product,
         quantity: Math.max(1, item.quantity),
-        unitAmountMinor: activePrice.amountMinor,
-        lineAmountMinor: activePrice.amountMinor * Math.max(1, item.quantity),
+        unitAmountMinor,
+        lineAmountMinor: unitAmountMinor * Math.max(1, item.quantity),
         currency: activePrice.currency
       };
     });
+  }
+
+  private assertRetailPurchasable(
+    product: {
+      id: string;
+      targetMarket: string;
+      availabilityStatus?: string | null;
+      inventoryQuantity?: number | null;
+      minimumOrderQuantity?: number | null;
+      isPreorderEnabled?: boolean | null;
+    },
+    quantity: number
+  ) {
+    if (product.targetMarket === 'b2b') {
+      throw new ConflictException(`Product ${product.id} is wholesale-only and must go through RFQ.`);
+    }
+
+    if (product.isPreorderEnabled || product.availabilityStatus === 'preorder') {
+      throw new ConflictException(`Product ${product.id} is preorder-only and cannot be added to the retail cart.`);
+    }
+
+    if (product.availabilityStatus === 'out_of_stock' || product.availabilityStatus === 'discontinued') {
+      throw new ConflictException(`Product ${product.id} is not available for retail purchase.`);
+    }
+
+    if (product.minimumOrderQuantity && quantity < product.minimumOrderQuantity) {
+      throw new ConflictException(`Product ${product.id} requires a minimum quantity of ${product.minimumOrderQuantity}.`);
+    }
+
+    if (product.inventoryQuantity !== null && product.inventoryQuantity !== undefined && product.inventoryQuantity < quantity) {
+      throw new ConflictException(`Product ${product.id} does not have enough stock for quantity ${quantity}.`);
+    }
+  }
+
+  private resolveCurrentAmount(
+    product: {
+      salePriceMinor?: number | null;
+      saleStartsAt?: Date | null;
+      saleEndsAt?: Date | null;
+    },
+    activeAmountMinor: number
+  ) {
+    if (!product.salePriceMinor) {
+      return activeAmountMinor;
+    }
+
+    const now = Date.now();
+    const saleStartsAt = product.saleStartsAt?.getTime() ?? null;
+    const saleEndsAt = product.saleEndsAt?.getTime() ?? null;
+    const saleStarted = saleStartsAt === null || saleStartsAt <= now;
+    const saleActive = saleEndsAt === null || saleEndsAt >= now;
+
+    return saleStarted && saleActive ? Math.min(product.salePriceMinor, activeAmountMinor) : activeAmountMinor;
   }
 
   private async findScopedProfileIds(kind: 'buyer' | 'seller', authContext: AuthContext) {

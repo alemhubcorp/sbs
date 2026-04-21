@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "build": "npm run build:packages && npm run build:apps",
-    "build:packages": "npm run build -w @ruflo/contracts && npm run build -w @ruflo/config && npm run prisma:generate && npm run build -w @ruflo/database && npm run build -w @ruflo/sql && npm run build -w @ruflo/ui",
+    "build:packages": "npm run build -w @ruflo/contracts && npm run build -w @ruflo/config && npm run prisma:generate && npm run build -w @ruflo/database && npm run build -w @ruflo/domain && npm run build -w @ruflo/sql && npm run build -w @ruflo/ui",
     "build:apps": "npm run build -w @ruflo/api && npm run build -w @ruflo/worker && npm run build -w @ruflo/ai-worker && npm run build -w @ruflo/web && npm run build -w @ruflo/admin",
     "dev": "npm run dev -w @ruflo/api",
     "dev:web": "npm run dev -w @ruflo/web",

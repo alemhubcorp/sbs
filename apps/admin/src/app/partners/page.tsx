@@ -137,7 +137,7 @@ export default async function PartnersPage({
         </form>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
         <article style={{ padding: 16, background: '#111827', borderRadius: 12 }}>
           <h2 style={{ marginTop: 0 }}>Create partner</h2>
           <form action={createPartnerAction} style={{ display: 'grid', gap: 8 }}>
@@ -246,7 +246,7 @@ export default async function PartnersPage({
         </article>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
         <article style={{ padding: 16, background: '#111827', borderRadius: 12 }}>
           <h2 style={{ marginTop: 0 }}>Existing partners</h2>
           <div style={{ display: 'grid', gap: 12 }}>

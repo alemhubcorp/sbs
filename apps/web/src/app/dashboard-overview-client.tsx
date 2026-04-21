@@ -27,7 +27,12 @@ function statusTone(status: string) {
   return `${styles.status} ${styles.statusWarning}`;
 }
 
+function shortId(value?: string | null) {
+  return value ? `#${value.slice(0, 8)}` : '#pending';
+}
+
 export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
+  const currentRole = role as string;
   const [data, setData] = useState<DashboardData>({ orders: [], deals: [], transactions: [], adminPayments: [], auditEvents: [], assignments: [] });
   const [loading, setLoading] = useState(role !== 'guest');
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +44,7 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
     }
 
     let cancelled = false;
+    const assignmentKind = currentRole === 'logistics' ? 'shipment' : currentRole === 'customs' ? 'customs' : null;
 
     async function load() {
       setLoading(true);
@@ -46,14 +52,18 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
 
       try {
         const [ordersResponse, dealsResponse, transactionsResponse, assignmentsResponse, adminPaymentsResponse, auditResponse] = await Promise.all([
-          role === 'buyer' || role === 'supplier' || role === 'admin' ? fetch('/api/retail/orders', { cache: 'no-store' }) : Promise.resolve(null),
-          role === 'buyer' || role === 'supplier' || role === 'admin' ? fetch('/api/contract/deals', { cache: 'no-store' }) : Promise.resolve(null),
-          role === 'supplier' || role === 'admin' ? fetch('/api/payments/transactions', { cache: 'no-store' }) : Promise.resolve(null),
-          role === 'logistics' || role === 'customs'
-            ? fetch(`/api/partner-ops/assignments?kind=${role === 'logistics' ? 'shipment' : 'customs'}`, { cache: 'no-store' })
+          currentRole === 'buyer' || currentRole === 'supplier' || currentRole === 'admin'
+            ? fetch('/api/retail/orders', { cache: 'no-store' })
             : Promise.resolve(null),
-          role === 'admin' ? fetch('/api/admin/payments?limit=5', { cache: 'no-store' }) : Promise.resolve(null),
-          role === 'admin' ? fetch('/api/audit/events?limit=5', { cache: 'no-store' }) : Promise.resolve(null)
+          currentRole === 'buyer' || currentRole === 'supplier' || currentRole === 'admin'
+            ? fetch('/api/contract/deals', { cache: 'no-store' })
+            : Promise.resolve(null),
+          currentRole === 'supplier' || currentRole === 'admin' ? fetch('/api/payments/transactions', { cache: 'no-store' }) : Promise.resolve(null),
+          assignmentKind
+            ? fetch(`/api/partner-ops/assignments?kind=${assignmentKind}`, { cache: 'no-store' })
+            : Promise.resolve(null),
+          currentRole === 'admin' ? fetch('/api/admin/payments?limit=5', { cache: 'no-store' }) : Promise.resolve(null),
+          currentRole === 'admin' ? fetch('/api/audit/events?limit=5', { cache: 'no-store' }) : Promise.resolve(null)
         ]);
         const assignmentsJson = assignmentsResponse?.ok ? await assignmentsResponse.json() : null;
         const adminPaymentsJson = adminPaymentsResponse?.ok ? await adminPaymentsResponse.json() : null;
@@ -142,12 +152,32 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
     return <div className={styles.errorBox}>{error}</div>;
   }
 
-  if (role === 'guest') {
+  if (currentRole === 'guest') {
     return (
-      <div className={styles.sectionCard}>
-        <div className={styles.sectionTitle}>Start with access.</div>
-        <div className={styles.subtle}>Sign in to see role-aware payments, payouts, and deal activity.</div>
-        <div className={styles.buttonRow} style={{ marginTop: 12 }}>
+      <div className={`${styles.heroPanel} ${styles.heroPanelCompact}`}>
+        <div className={styles.heroHeading}>
+          <div className={styles.sectionEyebrow}>Guest dashboard</div>
+          <h2 className={styles.heroTitle}>Access turns the marketplace into an operating console.</h2>
+          <p className={styles.heroDescription}>Sign in to unlock role-aware payments, deal tracking, logistics visibility, and supplier payout surfaces.</p>
+        </div>
+        <div className={styles.metricGrid}>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Buyer flow</div>
+            <div className={styles.metricValue}>RFQ to escrow</div>
+            <div className={styles.metricHint}>Requests, quotes, deals, checkout, and order follow-up live in one cabinet.</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Supplier flow</div>
+            <div className={styles.metricValue}>Quotes to payout</div>
+            <div className={styles.metricHint}>Suppliers keep deal status, release readiness, and payout settings in sync.</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Operator flow</div>
+            <div className={styles.metricValue}>Logistics and customs</div>
+            <div className={styles.metricHint}>Partners stay on dedicated live routes without leaving the production domain.</div>
+          </div>
+        </div>
+        <div className={styles.buttonRow}>
           <Link href="/signin?returnTo=/dashboard" className={styles.button}>
             Sign In
           </Link>
@@ -159,18 +189,49 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
     );
   }
 
-  if (role === 'buyer') {
+  if (currentRole === 'buyer') {
     return (
       <div className={styles.stack}>
+        <div className={styles.heroPanel}>
+          <div className={styles.heroHeading}>
+            <div className={styles.sectionEyebrow}>Buyer command view</div>
+            <h2 className={styles.heroTitle}>Track requests, active deals, and payment actions from one buyer workspace.</h2>
+            <p className={styles.heroDescription}>This overview keeps current order load, live deals, and the next escrow-linked payment steps visible without switching surfaces.</p>
+          </div>
+          <div className={styles.metricGrid}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Orders</div>
+              <div className={styles.metricValue}>{data.orders.length}</div>
+              <div className={styles.metricHint}>Retail orders currently in your cabinet.</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Active deals</div>
+              <div className={styles.metricValue}>{buyerSummary.deals.length}</div>
+              <div className={styles.metricHint}>Deal rooms still moving toward completion.</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Pending actions</div>
+              <div className={styles.metricValue}>{buyerSummary.pending.length}</div>
+              <div className={styles.metricHint}>Payments or confirmations still waiting on buyer action.</div>
+            </div>
+          </div>
+        </div>
         <div className={styles.cardGrid}>
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Orders</div>
             <div className={styles.sectionTitle}>Recent orders</div>
             <div className={styles.stack}>
               {buyerSummary.orders.length ? (
                 buyerSummary.orders.map((order) => (
-                  <div key={order.id} className={styles.row}>
-                    <span className={styles.label}>#{order.id.slice(0, 8)}</span>
-                    <span>{formatMoney(order.totalAmountMinor, order.currency)}</span>
+                  <div key={order.id} className={styles.listCard}>
+                    <div className={styles.listHead}>
+                      <span className={styles.label}>{shortId(order.id)}</span>
+                      <span className={styles.listValue}>{formatMoney(order.totalAmountMinor, order.currency)}</span>
+                    </div>
+                    <div className={styles.listMeta}>
+                      <span>Status: {order.status ?? 'pending'}</span>
+                      {order.createdAt ? <span>{formatDateTime(order.createdAt)}</span> : null}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -180,13 +241,20 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           </div>
 
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Deals</div>
             <div className={styles.sectionTitle}>Active deals</div>
             <div className={styles.stack}>
               {buyerSummary.deals.length ? (
                 buyerSummary.deals.map((deal) => (
-                  <div key={deal.id} className={styles.row}>
-                    <span className={styles.label}>#{deal.id.slice(0, 8)}</span>
-                    <span>{deal.dealStatus}</span>
+                  <div key={deal.id} className={styles.listCard}>
+                    <div className={styles.listHead}>
+                      <span className={styles.label}>{shortId(deal.id)}</span>
+                      <span className={statusTone(deal.dealStatus ?? 'pending')}>{deal.dealStatus ?? 'pending'}</span>
+                    </div>
+                    <div className={styles.listMeta}>
+                      {deal.updatedAt ? <span>Updated {formatDateTime(deal.updatedAt)}</span> : null}
+                      {deal.paymentMethod ? <span>Rail: {deal.paymentMethod}</span> : null}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -196,6 +264,7 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           </div>
 
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Actions</div>
             <div className={styles.sectionTitle}>Pending actions</div>
             <div className={styles.inlineMeta}>
               <span>Pay / confirm: {buyerSummary.pending.length}</span>
@@ -215,11 +284,40 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
     );
   }
 
-  if (role === 'supplier') {
+  if (currentRole === 'supplier') {
     return (
       <div className={styles.stack}>
+        <div className={styles.heroPanel}>
+          <div className={styles.heroHeading}>
+            <div className={styles.sectionEyebrow}>Supplier command view</div>
+            <h2 className={styles.heroTitle}>Keep earnings, live deals, and release readiness visible in one supplier board.</h2>
+            <p className={styles.heroDescription}>The supplier overview emphasizes held capital, payout readiness, and deal momentum without changing any settlement logic.</p>
+          </div>
+          <div className={styles.metricGrid}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Held</div>
+              <div className={styles.metricValue}>
+                {formatMoney(supplierSummary.held.reduce((total, transaction) => total + transaction.heldAmountMinor, 0), supplierSummary.currency)}
+              </div>
+              <div className={styles.metricHint}>Funds currently protected inside escrow.</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Releasable</div>
+              <div className={styles.metricValue}>
+                {formatMoney(supplierSummary.releasable.reduce((total, transaction) => total + transaction.heldAmountMinor, 0), supplierSummary.currency)}
+              </div>
+              <div className={styles.metricHint}>Payout volume eligible once completion conditions are satisfied.</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Pending shipments</div>
+              <div className={styles.metricValue}>{supplierSummary.shipmentsPending.length}</div>
+              <div className={styles.metricHint}>Accepted or escrow-funded deals waiting on fulfillment progress.</div>
+            </div>
+          </div>
+        </div>
         <div className={styles.cardGrid}>
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Earnings</div>
             <div className={styles.sectionTitle}>Earnings summary</div>
             <div className={styles.inlineMeta}>
               <span>Held: {formatMoney(supplierSummary.held.reduce((total, transaction) => total + transaction.heldAmountMinor, 0), supplierSummary.currency)}</span>
@@ -229,13 +327,20 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           </div>
 
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Deal flow</div>
             <div className={styles.sectionTitle}>Recent deals</div>
             <div className={styles.stack}>
               {supplierSummary.deals.length ? (
                 supplierSummary.deals.map((deal) => (
-                  <div key={deal.id} className={styles.row}>
-                    <span className={styles.label}>#{deal.id.slice(0, 8)}</span>
-                    <span className={statusTone(deal.dealStatus)}>{deal.dealStatus}</span>
+                  <div key={deal.id} className={styles.listCard}>
+                    <div className={styles.listHead}>
+                      <span className={styles.label}>{shortId(deal.id)}</span>
+                      <span className={statusTone(deal.dealStatus ?? 'pending')}>{deal.dealStatus ?? 'pending'}</span>
+                    </div>
+                    <div className={styles.listMeta}>
+                      {deal.updatedAt ? <span>Updated {formatDateTime(deal.updatedAt)}</span> : null}
+                      {deal.deliveryStatus ? <span>Delivery: {deal.deliveryStatus}</span> : null}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -245,6 +350,7 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           </div>
 
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Release control</div>
             <div className={styles.sectionTitle}>Payout alerts</div>
             <div className={styles.subtle}>
               {supplierSummary.releasable.length ? `${supplierSummary.releasable.length} payout(s) ready for release.` : 'No payout alerts right now.'}
@@ -266,15 +372,44 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
     );
   }
 
-  if (role === 'logistics' || role === 'customs') {
-    const title = role === 'logistics' ? 'Logistics operations' : 'Customs operations';
-    const emptyMessage = role === 'logistics' ? 'No shipments assigned yet.' : 'No customs cases assigned yet.';
-    const destination = role === 'logistics' ? '/logistics' : '/customs';
+  if (currentRole === 'logistics' || currentRole === 'customs') {
+    const title = currentRole === 'logistics' ? 'Logistics operations' : 'Customs operations';
+    const emptyMessage = currentRole === 'logistics' ? 'No shipments assigned yet.' : 'No customs cases assigned yet.';
+    const destination = currentRole === 'logistics' ? '/logistics' : '/customs';
 
     return (
       <div className={styles.stack}>
+        <div className={styles.heroPanel}>
+          <div className={styles.heroHeading}>
+            <div className={styles.sectionEyebrow}>{currentRole === 'logistics' ? 'Logistics command view' : 'Customs command view'}</div>
+            <h2 className={styles.heroTitle}>{currentRole === 'logistics' ? 'Assigned shipment work stays visible and current.' : 'Assigned customs cases stay visible and action-ready.'}</h2>
+            <p className={styles.heroDescription}>
+              {currentRole === 'logistics'
+                ? 'Use this overview to track workload, active statuses, and handoff points before opening the detailed logistics board.'
+                : 'Use this overview to monitor case status, document pressure, and broker follow-up before opening the detailed customs board.'}
+            </p>
+          </div>
+          <div className={styles.metricGrid}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Assignments</div>
+              <div className={styles.metricValue}>{partnerSummary.total}</div>
+              <div className={styles.metricHint}>Current items assigned to this operator role.</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Status spread</div>
+              <div className={styles.metricValue}>{Object.keys(partnerSummary.statusCounts).length || 0}</div>
+              <div className={styles.metricHint}>Distinct lifecycle states currently represented in the queue.</div>
+            </div>
+            <div className={styles.metricCard}>
+              <div className={styles.metricLabel}>Next action</div>
+              <div className={styles.metricValue}>{partnerSummary.assignments[0]?.status ?? 'clear'}</div>
+              <div className={styles.metricHint}>Top visible status from the current assignment list.</div>
+            </div>
+          </div>
+        </div>
         <div className={styles.cardGrid}>
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Load</div>
             <div className={styles.sectionTitle}>{title}</div>
             <div className={styles.inlineMeta}>
               <span>Assignments: {partnerSummary.total}</span>
@@ -293,13 +428,20 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           </div>
 
           <div className={styles.card}>
-            <div className={styles.sectionTitle}>{role === 'logistics' ? 'Assigned shipments' : 'Assigned customs cases'}</div>
+            <div className={styles.sectionEyebrow}>{currentRole === 'logistics' ? 'Shipments' : 'Cases'}</div>
+            <div className={styles.sectionTitle}>{currentRole === 'logistics' ? 'Assigned shipments' : 'Assigned customs cases'}</div>
             <div className={styles.stack}>
               {partnerSummary.assignments.length ? (
                 partnerSummary.assignments.map((assignment) => (
-                  <div key={assignment.id} className={styles.row}>
-                    <span className={styles.label}>#{assignment.reference ?? assignment.id.slice(0, 8)}</span>
-                    <span className={statusTone(assignment.status)}>{assignment.status}</span>
+                  <div key={assignment.id} className={styles.listCard}>
+                    <div className={styles.listHead}>
+                      <span className={styles.label}>#{assignment.reference ?? assignment.id.slice(0, 8)}</span>
+                      <span className={statusTone(assignment.status ?? 'pending')}>{assignment.status ?? 'pending'}</span>
+                    </div>
+                    <div className={styles.listMeta}>
+                      {assignment.createdAt ? <span>{formatDateTime(assignment.createdAt)}</span> : null}
+                      {assignment.organizationName ? <span>{assignment.organizationName}</span> : null}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -309,6 +451,7 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           </div>
 
           <div className={styles.card}>
+            <div className={styles.sectionEyebrow}>Signals</div>
             <div className={styles.sectionTitle}>Notifications</div>
             <div className={styles.subtle}>Assignment changes and lifecycle updates appear in-app and stay visible in the cabinet.</div>
             <div className={styles.buttonRow} style={{ marginTop: 12 }}>
@@ -327,8 +470,33 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
 
   return (
     <div className={styles.stack}>
+      <div className={styles.heroPanel}>
+        <div className={styles.heroHeading}>
+          <div className={styles.sectionEyebrow}>Admin overview</div>
+          <h2 className={styles.heroTitle}>Control payment review, audit activity, and provider readiness from one executive surface.</h2>
+          <p className={styles.heroDescription}>This admin summary highlights payment review pressure and recent system activity without changing the current control plane workflow.</p>
+        </div>
+        <div className={styles.metricGrid}>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Payments</div>
+            <div className={styles.metricValue}>{adminSummary.total}</div>
+            <div className={styles.metricHint}>Admin payment records currently visible in the review surface.</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Needs review</div>
+            <div className={styles.metricValue}>{adminSummary.review.length}</div>
+            <div className={styles.metricHint}>Items still waiting for manual decisioning.</div>
+          </div>
+          <div className={styles.metricCard}>
+            <div className={styles.metricLabel}>Audit events</div>
+            <div className={styles.metricValue}>{adminSummary.auditEvents.length}</div>
+            <div className={styles.metricHint}>Recent operational and system traces available in the audit feed.</div>
+          </div>
+        </div>
+      </div>
       <div className={styles.cardGrid}>
         <div className={styles.card}>
+          <div className={styles.sectionEyebrow}>Payments</div>
           <div className={styles.sectionTitle}>Payment operations</div>
           <div className={styles.subtle}>Review payments, webhooks, and manual reconciliation from one place.</div>
           <div className={styles.buttonRow} style={{ marginTop: 12 }}>
@@ -342,13 +510,20 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
         </div>
 
         <div className={styles.card}>
+          <div className={styles.sectionEyebrow}>Recent activity</div>
           <div className={styles.sectionTitle}>Recent activity</div>
           <div className={styles.stack}>
             {adminSummary.payments.length ? (
               adminSummary.payments.map((payment) => (
-                <div key={payment.id} className={styles.row}>
-                  <span className={styles.label}>#{payment.id.slice(0, 8)}</span>
-                  <span>{paymentStatusLabel(payment.status)}</span>
+                <div key={payment.id} className={styles.listCard}>
+                  <div className={styles.listHead}>
+                    <span className={styles.label}>{shortId(payment.id)}</span>
+                    <span className={statusTone(payment.status ?? 'pending')}>{paymentStatusLabel(payment.status)}</span>
+                  </div>
+                  <div className={styles.listMeta}>
+                    {payment.amountMinor != null ? <span>{formatMoney(payment.amountMinor, payment.currency ?? 'USD')}</span> : null}
+                    {payment.reviewState ? <span>Review: {payment.reviewState}</span> : null}
+                  </div>
                 </div>
               ))
             ) : (
@@ -358,13 +533,20 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
         </div>
 
         <div className={styles.card}>
+          <div className={styles.sectionEyebrow}>Audit</div>
           <div className={styles.sectionTitle}>Audit trail</div>
           <div className={styles.stack}>
             {adminSummary.auditEvents.length ? (
               adminSummary.auditEvents.map((event: any) => (
-                <div key={event.id} className={styles.row}>
-                  <span className={styles.label}>{formatDateTime(event.createdAt)}</span>
-                  <span>{event.eventType ?? event.action ?? 'event'}</span>
+                <div key={event.id} className={styles.listCard}>
+                  <div className={styles.listHead}>
+                    <span className={styles.label}>{formatDateTime(event.createdAt)}</span>
+                    <span className={styles.listValue}>{event.eventType ?? event.action ?? 'event'}</span>
+                  </div>
+                  <div className={styles.listMeta}>
+                    {event.module ? <span>Module: {event.module}</span> : null}
+                    {event.subjectType ? <span>Subject: {event.subjectType}</span> : null}
+                  </div>
                 </div>
               ))
             ) : (
@@ -374,6 +556,7 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
         </div>
 
         <div className={styles.card}>
+          <div className={styles.sectionEyebrow}>Review</div>
           <div className={styles.sectionTitle}>Review queue</div>
           <div className={styles.inlineMeta}>
             <span>Review required: {adminSummary.review.length}</span>

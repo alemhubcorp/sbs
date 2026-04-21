@@ -233,6 +233,47 @@ type PlatformInvoiceSettings = {
   companySealImageUrl: string;
 };
 
+type GovernanceAuthSettings = {
+  emailVerificationRequired: boolean;
+  registrationDocumentSlugs: string[];
+  supplierRegistrationDocumentSlugs: string[];
+  checkoutDocumentSlugs: string[];
+  dealFundingDocumentSlugs: string[];
+};
+
+export type AiContentAssistantSettings = {
+  enabled: boolean;
+  provider: string;
+  model: string;
+  apiBaseUrl: string;
+  apiKey: string;
+  translationLanguages: string[];
+  notes: string;
+};
+
+type LegalDocumentSetting = {
+  slug: string;
+  title: string;
+  footerLabel: string;
+  summary: string;
+  content: string;
+  version: string;
+  active: boolean;
+  showInFooter: boolean;
+};
+
+type PublicEntrySetting = {
+  id: string;
+  label: string;
+  name: string;
+  value: string;
+  url: string;
+  icon: string;
+  logoUrl: string;
+  active: boolean;
+  displayOrder: number;
+};
+
 @Injectable()
 export class AdminOpsService {
   constructor(
@@ -291,6 +332,155 @@ export class AdminOpsService {
     });
 
     return sanitizeAdminSettingRow(saved as AdminSettingRow);
+  }
+
+  async getPublicSettings() {
+    const rows = await this.loadSettings();
+    const settings = this.buildSettingsDocument(rows);
+    const governance = this.readGovernance(rows);
+    const ai = this.readAiContentSettings(rows);
+    const legalDocuments = this.readLegalDocuments(rows)
+      .filter((document) => document.active)
+      .map((document) => ({
+        slug: document.slug,
+        title: document.title,
+        footerLabel: document.footerLabel,
+        summary: document.summary,
+        version: document.version,
+        href: this.legalHref(document.slug),
+        showInFooter: document.showInFooter
+      }));
+
+    return {
+      company: {
+        legalName: settings.platformReceiving.platformLegalName,
+        address: settings.platformReceiving.platformAddress,
+        supportEmail: settings.bankReceiving.supportEmail,
+        supportPhone: settings.bankReceiving.supportPhone
+      },
+      governance: {
+        emailVerificationRequired: governance.emailVerificationRequired,
+        emailVerificationBlockedReason:
+          governance.emailVerificationRequired && !this.isEmailConfigured(rows)
+            ? 'Email verification is enabled, but SMTP/email delivery is not configured.'
+            : null,
+        consent: {
+          registrationDocumentSlugs: governance.registrationDocumentSlugs,
+          supplierRegistrationDocumentSlugs: governance.supplierRegistrationDocumentSlugs,
+          checkoutDocumentSlugs: governance.checkoutDocumentSlugs,
+          dealFundingDocumentSlugs: governance.dealFundingDocumentSlugs
+        }
+      },
+      email: {
+        enabled: settings.email.enabled,
+        smtpConfigured: this.isEmailConfigured(rows)
+      },
+      ai: {
+        enabled: ai.enabled,
+        translationLanguages: ai.translationLanguages
+      },
+      socials: this.readPublicEntries(rows, adminSettingKeys.publicSocialLinks, 'items').filter((entry) => entry.active),
+      contacts: {
+        addresses: this.readPublicEntries(rows, adminSettingKeys.publicContacts, 'addresses').filter((entry) => entry.active),
+        phones: this.readPublicEntries(rows, adminSettingKeys.publicContacts, 'phones').filter((entry) => entry.active)
+      },
+      legalDocuments
+    };
+  }
+
+  async getPublicLegalDocument(slug: string) {
+    const rows = await this.loadSettings();
+    const document = this.readLegalDocuments(rows).find((entry) => entry.slug === slug && entry.active);
+
+    if (!document) {
+      throw new NotFoundException(`Legal document ${slug} was not found.`);
+    }
+
+    return {
+      ...document,
+      href: this.legalHref(document.slug)
+    };
+  }
+
+  async getAuthGovernanceConfig() {
+    const rows = await this.loadSettings();
+    return {
+      ...this.readGovernance(rows),
+      smtpConfigured: this.isEmailConfigured(rows)
+    };
+  }
+
+  async getAiContentSettings() {
+    const rows = await this.loadSettings();
+    return this.readAiContentSettings(rows);
+  }
+
+  async validateRequiredConsents(
+    flow: 'buyer_registration' | 'supplier_registration' | 'checkout' | 'deal_funding',
+    provided: unknown
+  ) {
+    const rows = await this.loadSettings();
+    const legalDocuments = this.readLegalDocuments(rows);
+    const governance = this.readGovernance(rows);
+    const submitted = this.parseConsents(provided);
+    const requiredSlugs = this.requiredConsentSlugs(governance, flow);
+
+    for (const slug of requiredSlugs) {
+      const document = legalDocuments.find((entry) => entry.slug === slug && entry.active);
+      if (!document) {
+        throw new BadRequestException(`Required legal document ${slug} is not configured.`);
+      }
+
+      const accepted = submitted.find((entry) => entry.documentSlug === slug);
+      if (!accepted) {
+        throw new BadRequestException(`Consent is required for ${document.title}.`);
+      }
+
+      if (accepted.version !== document.version) {
+        throw new BadRequestException(`Consent version mismatch for ${document.title}.`);
+      }
+    }
+
+    return requiredSlugs.map((slug) => {
+      const document = legalDocuments.find((entry) => entry.slug === slug && entry.active)!;
+      return {
+        documentSlug: document.slug,
+        documentTitle: document.title,
+        documentVersion: document.version
+      };
+    });
+  }
+
+  async recordConsents(
+    flow: 'buyer_registration' | 'supplier_registration' | 'checkout' | 'deal_funding',
+    provided: unknown,
+    context: {
+      userId?: string | null;
+      email?: string | null;
+      entityType?: string | null;
+      entityId?: string | null;
+      ipAddress?: string | null;
+      userAgent?: string | null;
+      metadata?: Prisma.InputJsonValue;
+    }
+  ) {
+    const accepted = await this.validateRequiredConsents(flow, provided);
+
+    await this.prismaService.client.consentRecord.createMany({
+      data: accepted.map((entry) => ({
+        userId: context.userId ?? null,
+        email: context.email ?? null,
+        flow,
+        documentSlug: entry.documentSlug,
+        documentTitle: entry.documentTitle,
+        documentVersion: entry.documentVersion,
+        entityType: context.entityType ?? null,
+        entityId: context.entityId ?? null,
+        ipAddress: context.ipAddress ?? null,
+        userAgent: context.userAgent ?? null,
+        metadata: context.metadata ?? Prisma.JsonNull
+      }))
+    });
   }
 
   async getPaymentConfig(authContext: AuthContext) {
@@ -1174,6 +1364,145 @@ export class AdminOpsService {
       manualPayment: this.readManualPayment(rows),
       paymentRouting: this.readRouting(rows)
     };
+  }
+
+  private readGovernance(rows: AdminSettingRow[]): GovernanceAuthSettings {
+    const value = isRecord(getSettingValue(rows, adminSettingKeys.governanceAuth))
+      ? (getSettingValue(rows, adminSettingKeys.governanceAuth) as Record<string, unknown>)
+      : {};
+
+    return {
+      emailVerificationRequired: getBoolean(value.emailVerificationRequired, false),
+      registrationDocumentSlugs: cleanStringArray(value.registrationDocumentSlugs),
+      supplierRegistrationDocumentSlugs: cleanStringArray(value.supplierRegistrationDocumentSlugs),
+      checkoutDocumentSlugs: cleanStringArray(value.checkoutDocumentSlugs),
+      dealFundingDocumentSlugs: cleanStringArray(value.dealFundingDocumentSlugs)
+    };
+  }
+
+  private readAiContentSettings(rows: AdminSettingRow[]): AiContentAssistantSettings {
+    const value = isRecord(getSettingValue(rows, adminSettingKeys.aiContentAssistant))
+      ? (getSettingValue(rows, adminSettingKeys.aiContentAssistant) as Record<string, unknown>)
+      : {};
+
+    const apiKey =
+      getString(value.apiKey, '') ||
+      getString(process.env.OPENAI_API_KEY, '') ||
+      getString(process.env.AI_CONTENT_API_KEY, '');
+    const provider = getString(value.provider, 'openai');
+
+    return {
+      enabled: getBoolean(value.enabled, false),
+      provider,
+      model: getString(
+        value.model,
+        provider === 'openai' ? getString(process.env.AI_CONTENT_MODEL, 'gpt-5.2') : getString(process.env.AI_CONTENT_MODEL, '')
+      ),
+      apiBaseUrl: getString(
+        value.apiBaseUrl,
+        provider === 'openai'
+          ? getString(process.env.AI_CONTENT_BASE_URL, 'https://api.openai.com/v1/responses')
+          : getString(process.env.AI_CONTENT_BASE_URL, '')
+      ),
+      apiKey,
+      translationLanguages: cleanStringArray(value.translationLanguages),
+      notes: getString(value.notes, '')
+    };
+  }
+
+  private readLegalDocuments(rows: AdminSettingRow[]): LegalDocumentSetting[] {
+    const value = isRecord(getSettingValue(rows, adminSettingKeys.legalDocuments))
+      ? (getSettingValue(rows, adminSettingKeys.legalDocuments) as Record<string, unknown>)
+      : {};
+    const documents = Array.isArray(value.documents) ? value.documents : [];
+
+    return documents
+      .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+      .map((entry) => ({
+        slug: getString(entry.slug, '').trim(),
+        title: getString(entry.title, '').trim(),
+        footerLabel: getString(entry.footerLabel, getString(entry.title, '').trim()),
+        summary: getString(entry.summary, '').trim(),
+        content: getString(entry.content, '').trim(),
+        version: getString(entry.version, 'unversioned'),
+        active: getBoolean(entry.active, true),
+        showInFooter: getBoolean(entry.showInFooter, true)
+      }))
+      .filter((entry) => entry.slug.length > 0 && entry.title.length > 0);
+  }
+
+  private readPublicEntries(rows: AdminSettingRow[], key: string, field: string): PublicEntrySetting[] {
+    const value = isRecord(getSettingValue(rows, key)) ? (getSettingValue(rows, key) as Record<string, unknown>) : {};
+    const entries = Array.isArray(value[field]) ? value[field] : [];
+
+    return entries
+      .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+      .map((entry, index) => ({
+        id: getString(entry.id, `${field}-${index + 1}`),
+        label: getString(entry.label, ''),
+        name: getString(entry.name, ''),
+        value: getString(entry.value, ''),
+        url: getString(entry.url, ''),
+        icon: getString(entry.icon, ''),
+        logoUrl: getString(entry.logoUrl, ''),
+        active: getBoolean(entry.active, true),
+        displayOrder: getNumber(entry.displayOrder, index + 1)
+      }))
+      .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id));
+  }
+
+  private isEmailConfigured(rows: AdminSettingRow[]) {
+    const email = isRecord(getSettingValue(rows, adminSettingKeys.email)) ? (getSettingValue(rows, adminSettingKeys.email) as Record<string, unknown>) : {};
+    const enabled = getBoolean(email.enabled, false) || process.env.SMTP_ENABLED === 'true';
+    const host = getString(email.smtpHost, process.env.SMTP_HOST ?? '');
+    const fromEmail = getString(email.fromEmail, process.env.SMTP_FROM ?? 'noreply@ruflo.local');
+    const smtpUser = getString(email.smtpUser, process.env.SMTP_USER ?? '');
+    const smtpPassword = getString(email.smtpPassword, process.env.SMTP_PASS ?? '');
+    const hasExplicitAuth = Boolean(smtpUser) && Boolean(smtpPassword);
+    const usingEnvNoAuth = process.env.SMTP_ENABLED === 'true' && Boolean(host);
+
+    return (
+      enabled &&
+      Boolean(host) &&
+      Boolean(fromEmail) &&
+      (hasExplicitAuth || usingEnvNoAuth)
+    );
+  }
+
+  private legalHref(slug: string) {
+    if (slug === 'privacy') return '/privacy';
+    if (slug === 'terms') return '/terms';
+    if (slug === 'returns') return '/returns';
+    if (slug === 'support-policy') return '/support-policy';
+    if (slug === 'seller-policy') return '/seller-policy';
+    return `/legal/${slug}`;
+  }
+
+  private requiredConsentSlugs(governance: GovernanceAuthSettings, flow: 'buyer_registration' | 'supplier_registration' | 'checkout' | 'deal_funding') {
+    if (flow === 'buyer_registration') {
+      return governance.registrationDocumentSlugs;
+    }
+    if (flow === 'supplier_registration') {
+      return governance.supplierRegistrationDocumentSlugs;
+    }
+    if (flow === 'checkout') {
+      return governance.checkoutDocumentSlugs;
+    }
+    return governance.dealFundingDocumentSlugs;
+  }
+
+  private parseConsents(input: unknown) {
+    if (!Array.isArray(input)) {
+      return [];
+    }
+
+    return input
+      .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+      .map((entry) => ({
+        documentSlug: getString(entry.documentSlug, '').trim(),
+        version: getString(entry.version, '').trim()
+      }))
+      .filter((entry) => entry.documentSlug.length > 0 && entry.version.length > 0);
   }
 
   private readProvider(rows: AdminSettingRow[], key: string) {

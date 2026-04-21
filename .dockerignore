@@ -1,6 +1,7 @@
 **/node_modules
 **/.next
 **/dist
+**/*.tsbuildinfo
 **/coverage
 **/*.log
 .git
@@ -11,3 +12,4 @@
 tmp
 cache
 out
+infra/data

@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import type { RequestAuditContext } from '../../app/auth-context.js';
 import type { AuthContext } from '../../app/auth-context.js';
+import { AdminOpsService } from '../admin-ops/admin-ops.service.js';
 import { AuditService } from '../audit-observability/audit.service.js';
 import { NotificationService } from '../notifications-core/notification.service.js';
 import { PaymentCoreService } from '../payment-core/payment-core.service.js';
@@ -42,13 +43,32 @@ const checkoutSchema = z.object({
   country: z.string().min(2).max(120),
   postalCode: z.string().min(2).max(32),
   phone: z.string().max(40).optional(),
-  paymentMethod: z.enum(['card', 'qr', 'bank_transfer', 'manual']).default('card'),
-  paymentProvider: z.enum(['internal_manual', 'airwallex', 'none']).optional()
+  paymentMethod: z.enum(['card', 'qr', 'bank_transfer', 'swift', 'manual']).default('card'),
+  paymentProvider: z.enum(['internal_manual', 'airwallex', 'none']).optional(),
+  consents: z
+    .array(
+      z.object({
+        documentSlug: z.string().trim().min(1).max(120),
+        version: z.string().trim().min(1).max(40)
+      })
+    )
+    .default([])
 });
 
 const submitPaymentSchema = z.object({
   simulateFailure: z.boolean().optional(),
-  note: z.string().max(500).optional()
+  note: z.string().max(500).optional(),
+  method: z.enum(['card', 'qr', 'bank_transfer', 'swift', 'manual']).optional(),
+  paymentProvider: z.enum(['internal_manual', 'airwallex', 'none']).optional(),
+  card: z
+    .object({
+      cardholderName: z.string().min(1).max(120),
+      cardNumber: z.string().min(12).max(24),
+      expiryMonth: z.string().min(1).max(2),
+      expiryYear: z.string().min(2).max(4),
+      cvc: z.string().min(3).max(4)
+    })
+    .optional()
 });
 
 @Injectable()
@@ -56,6 +76,8 @@ export class RetailOrdersCheckoutService {
   constructor(
     @Inject(RetailOrdersCheckoutRepository)
     private readonly retailOrdersCheckoutRepository: RetailOrdersCheckoutRepository,
+    @Inject(AdminOpsService)
+    private readonly adminOpsService: AdminOpsService,
     @Inject(AuditService)
     private readonly auditService: AuditService,
     @Inject(NotificationService)
@@ -150,6 +172,7 @@ export class RetailOrdersCheckoutService {
 
   async checkoutOrder(id: string, input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
     const parsed = checkoutSchema.parse(input);
+    await this.adminOpsService.validateRequiredConsents('checkout', parsed.consents);
     const order = await this.retailOrdersCheckoutRepository.checkoutOrder(authContext, id, parsed);
 
     await this.paymentCoreService.selectOrderPayment(
@@ -205,12 +228,82 @@ export class RetailOrdersCheckoutService {
       }
     );
 
+    await this.adminOpsService.recordConsents('checkout', parsed.consents, {
+      userId: authContext.internalUserId,
+      entityType: 'retail-order',
+      entityId: refreshed.id,
+      metadata: {
+        paymentMethod: parsed.paymentMethod
+      }
+    });
+
     return refreshed;
   }
 
   async submitPayment(id: string, input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
     const parsed = submitPaymentSchema.parse(input);
-    const order = await this.retailOrdersCheckoutRepository.getOrderById(id, authContext);
+    let order = await this.retailOrdersCheckoutRepository.getOrderById(id, authContext);
+    let paymentRecord = order.paymentRecords?.[0] ?? null;
+    if (!paymentRecord) {
+      throw new ConflictException('Checkout must be completed before submitting payment.');
+    }
+
+    const requestedMethod = parsed.method as PaymentMethod | undefined;
+    const requestedProvider = parsed.paymentProvider as PaymentProviderCode | undefined;
+    const shouldReselect =
+      (requestedMethod && requestedMethod !== paymentRecord.method) ||
+      (requestedProvider && requestedProvider !== paymentRecord.provider);
+
+    if (shouldReselect) {
+      await this.paymentCoreService.selectOrderPayment(
+        {
+          id: order.id,
+          status: order.status,
+          currency: order.currency,
+          totalAmountMinor: order.totalAmountMinor,
+          paymentStatus: order.paymentStatus,
+          paymentTransactionId: order.paymentTransactionId,
+          buyerProfile: order.buyerProfile
+            ? {
+                displayName: order.buyerProfile.displayName,
+                user: order.buyerProfile.user ? { email: order.buyerProfile.user.email } : null,
+                tenantId: order.buyerProfile.tenant?.id ?? null
+              }
+            : null,
+          supplierProfile: order.supplierProfile
+            ? {
+                displayName: order.supplierProfile.displayName,
+                user: order.supplierProfile.user ? { email: order.supplierProfile.user.email } : null,
+                tenantId: order.supplierProfile.tenant?.id ?? null
+              }
+            : null
+        },
+        {
+          method: requestedMethod ?? (paymentRecord.method as PaymentMethod),
+          provider: requestedProvider
+        },
+        auditContext
+      );
+
+      order = await this.retailOrdersCheckoutRepository.getOrderById(id, authContext);
+      paymentRecord = order.paymentRecords?.[0] ?? null;
+      if (!paymentRecord) {
+        throw new ConflictException('Payment method could not be reselected for this order.');
+      }
+    }
+
+    const cardMetadata = parsed.card
+      ? {
+          cardSubmission: {
+            cardholderName: parsed.card.cardholderName,
+            brand: this.detectCardBrand(parsed.card.cardNumber),
+            last4: parsed.card.cardNumber.slice(-4),
+            expiryMonth: parsed.card.expiryMonth,
+            expiryYear: parsed.card.expiryYear
+          }
+        }
+      : undefined;
+
     await this.paymentCoreService.confirmOrderPayment(
       {
         id: order.id,
@@ -235,9 +328,11 @@ export class RetailOrdersCheckoutService {
           : null
       },
       {
-        method: 'manual',
+        method: paymentRecord.method as PaymentMethod,
         simulateFailure: parsed.simulateFailure,
         note: parsed.note
+          ?? (paymentRecord.method === 'card' ? 'Buyer submitted card payment details from the retail checkout flow.' : undefined),
+        ...(cardMetadata ? { metadata: cardMetadata } : {})
       },
       auditContext
     );
@@ -251,6 +346,7 @@ export class RetailOrdersCheckoutService {
       {
         paymentStatus: updated.paymentStatus,
         paymentTransactionId: updated.paymentTransactionId,
+        paymentMethod: paymentRecord.method,
         totalAmountMinor: updated.totalAmountMinor,
         currency: updated.currency,
         note: parsed.note ?? null
@@ -273,6 +369,23 @@ export class RetailOrdersCheckoutService {
     );
 
     return updated;
+  }
+
+  private detectCardBrand(cardNumber: string) {
+    const sanitized = cardNumber.replace(/\D/g, '');
+    if (/^4/.test(sanitized)) {
+      return 'visa';
+    }
+
+    if (/^(5[1-5]|2[2-7])/.test(sanitized)) {
+      return 'mastercard';
+    }
+
+    if (/^3[47]/.test(sanitized)) {
+      return 'amex';
+    }
+
+    return 'card';
   }
 
   async shipOrder(id: string, auditContext: RequestAuditContext, authContext: AuthContext) {

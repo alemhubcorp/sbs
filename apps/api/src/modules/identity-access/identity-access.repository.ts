@@ -8,6 +8,7 @@ export interface CreateUserRecordInput {
   lastName: string;
   externalSubject?: string | undefined;
   roleIds: string[];
+  status?: 'invited' | 'active' | 'disabled';
 }
 
 export interface CreateRoleRecordInput {
@@ -90,7 +91,7 @@ export class IdentityAccessRepository {
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
-        status: 'invited'
+        status: input.status ?? 'invited'
       };
 
       if (input.externalSubject) {
@@ -229,6 +230,22 @@ export class IdentityAccessRepository {
     }
 
     return this.getUserById(userId);
+  }
+
+  async updateUserStatus(userId: string, status: 'active' | 'disabled') {
+    await this.getUserById(userId);
+
+    return this.prismaService.client.user.update({
+      where: { id: userId },
+      data: { status },
+      include: {
+        userRoles: {
+          include: {
+            role: true
+          }
+        }
+      }
+    });
   }
 
   async syncRolePermissions(roleId: string, permissionIds: string[]) {

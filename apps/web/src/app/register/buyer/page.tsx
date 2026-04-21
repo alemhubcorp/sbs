@@ -27,10 +27,33 @@ export default async function BuyerRegisterPage({ searchParams }: { searchParams
   return (
     <RouteShell
       eyebrow="Buyer registration"
-      title="Create a buyer account."
-      description="Buyers can register here, create their profile, and continue directly into the dashboard after sign-in."
-      primary={{ label: 'Sign in', href: `/auth/login?returnTo=${encodeURIComponent(returnTo)}` }}
+      title="Create a buyer workspace built for sourcing, escrow, and delivery follow-up."
+      description="Buyers register here, create their production profile, and continue into the live marketplace with the same secure return path used on the public domain."
+      primary={{ label: 'Sign in', href: `/signin?returnTo=${encodeURIComponent(returnTo)}` }}
       secondary={{ label: 'Open registration menu', href: '/register' }}
+      cards={[
+        {
+          tag: 'Flow',
+          title: 'Source and negotiate',
+          body: 'Move from catalog browsing into RFQs, supplier quotes, and deal creation from one buyer cabinet.',
+          href: '/requests',
+          foot: 'Open requests →'
+        },
+        {
+          tag: 'Escrow',
+          title: 'Pay with visibility',
+          body: 'Track payment status, confirmations, and order history in the same production-safe buyer flow.',
+          href: '/buyer/payments',
+          foot: 'Open buyer payments →'
+        },
+        {
+          tag: 'Fulfillment',
+          title: 'Track order progress',
+          body: 'Keep delivery follow-up, notifications, and order status visible after checkout and deal acceptance.',
+          href: '/orders',
+          foot: 'Open orders →'
+        }
+      ]}
     >
       <div style={{ display: 'grid', gap: 16 }}>
         <RegistrationForm kind="buyer" returnTo={returnTo} />

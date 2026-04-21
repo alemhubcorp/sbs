@@ -41,17 +41,22 @@ export async function GET(request: NextRequest) {
   const appUrl = getPublicAppUrl(requestHost);
 
   if (!code || !returnedState || !state || returnedState !== state) {
-    return NextResponse.redirect(new URL('/?auth=invalid-state', appUrl));
+    return NextResponse.redirect(new URL('/signin?auth=invalid-state', appUrl));
   }
 
   try {
     const session = await exchangeAuthorizationCode(code, requestHost);
+
+    if (session.profile.emailVerified === false) {
+      return NextResponse.redirect(new URL('/signin?auth=email-verification-required', appUrl));
+    }
+
     await persistSession(session);
 
     const viewer = await getMarketplaceViewer();
     const destination = resolvePostLoginPath(returnTo, viewer.role);
     return NextResponse.redirect(new URL(destination, appUrl));
   } catch {
-    return NextResponse.redirect(new URL('/?auth=callback-error', appUrl));
+    return NextResponse.redirect(new URL('/signin?auth=callback-error', appUrl));
   }
 }

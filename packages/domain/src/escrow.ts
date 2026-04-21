@@ -180,6 +180,9 @@ export function satisfyReleaseCondition(
   }
 
   const condition = escrow.releaseConditions[conditionIndex];
+  if (!condition) {
+    throw new Error('Release condition not found.');
+  }
   if (condition.satisfied) {
     return escrow;
   }
@@ -332,7 +335,7 @@ export function openDispute(
     reason,
     status: 'open',
     openedAt,
-    notes,
+    ...(notes ? { notes } : {}),
   };
 
   const next = {
@@ -418,6 +421,9 @@ export function resolveRiskFlag(
   }
 
   const flag = escrow.riskFlags[flagIndex];
+  if (!flag) {
+    throw new Error('Risk flag not found.');
+  }
   if (flag.status !== 'open') {
     return escrow;
   }
@@ -482,17 +488,29 @@ export function resolveDispute(
     resolvedAt,
     resolvedBy: actor.id,
     outcome: input.outcome,
-    notes: input.notes ?? input.outcome.notes,
+    ...((input.notes ?? input.outcome.notes) ? { notes: input.notes ?? input.outcome.notes } : {}),
   };
 
   const next = {
     ...escrow,
     status: settleStatus,
     dispute,
-    releasedAt: outcomeType === 'release' ? resolvedAt : escrow.releasedAt,
-    refundedAt: outcomeType === 'refund' || outcomeType === 'partial_refund' ? resolvedAt : escrow.refundedAt,
-    cancelledAt: outcomeType === 'cancel' ? resolvedAt : escrow.cancelledAt,
     updatedAt: resolvedAt,
+    ...(outcomeType === 'release'
+      ? { releasedAt: resolvedAt }
+      : escrow.releasedAt
+        ? { releasedAt: escrow.releasedAt }
+        : {}),
+    ...(outcomeType === 'refund' || outcomeType === 'partial_refund'
+      ? { refundedAt: resolvedAt }
+      : escrow.refundedAt
+        ? { refundedAt: escrow.refundedAt }
+        : {}),
+    ...(outcomeType === 'cancel'
+      ? { cancelledAt: resolvedAt }
+      : escrow.cancelledAt
+        ? { cancelledAt: escrow.cancelledAt }
+        : {}),
   };
 
   return appendAuditLog(

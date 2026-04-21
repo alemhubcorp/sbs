@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const cookieNames = {
+export const adminCookieNames = {
   accessToken: 'ruflo_admin_access_token',
   refreshToken: 'ruflo_admin_refresh_token',
   idToken: 'ruflo_admin_id_token',
@@ -120,8 +120,8 @@ export async function createLoginRedirect(returnTo = '/', requestHost?: string |
   const { keycloakPublicUrl, realm, clientId, redirectUri, secureCookies } = getConfig(requestHost);
   const state = crypto.randomUUID();
   const cookieStore = await cookies();
-  cookieStore.set(cookieNames.state, state, { httpOnly: true, sameSite: 'lax', secure: secureCookies, path: '/' });
-  cookieStore.set(cookieNames.returnTo, returnTo, { httpOnly: true, sameSite: 'lax', secure: secureCookies, path: '/' });
+  cookieStore.set(adminCookieNames.state, state, { httpOnly: true, sameSite: 'lax', secure: secureCookies, path: '/' });
+  cookieStore.set(adminCookieNames.returnTo, returnTo, { httpOnly: true, sameSite: 'lax', secure: secureCookies, path: '/' });
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -203,38 +203,38 @@ export async function persistSession(session: AuthSession) {
     path: '/'
   };
 
-  cookieStore.set(cookieNames.accessToken, session.accessToken, baseOptions);
-  cookieStore.set(cookieNames.refreshToken, session.refreshToken, baseOptions);
-  cookieStore.set(cookieNames.expiresAt, String(session.expiresAt), baseOptions);
+  cookieStore.set(adminCookieNames.accessToken, session.accessToken, baseOptions);
+  cookieStore.set(adminCookieNames.refreshToken, session.refreshToken, baseOptions);
+  cookieStore.set(adminCookieNames.expiresAt, String(session.expiresAt), baseOptions);
 
   if (session.idToken) {
-    cookieStore.set(cookieNames.idToken, session.idToken, baseOptions);
+    cookieStore.set(adminCookieNames.idToken, session.idToken, baseOptions);
   }
 }
 
 export async function clearSession() {
   const cookieStore = await cookies();
-  for (const name of Object.values(cookieNames)) {
+  for (const name of Object.values(adminCookieNames)) {
     cookieStore.delete(name);
   }
 }
 
 export async function consumeLoginState() {
   const cookieStore = await cookies();
-  const state = cookieStore.get(cookieNames.state)?.value ?? null;
-  const returnTo = cookieStore.get(cookieNames.returnTo)?.value ?? '/';
-  cookieStore.delete(cookieNames.state);
-  cookieStore.delete(cookieNames.returnTo);
+  const state = cookieStore.get(adminCookieNames.state)?.value ?? null;
+  const returnTo = cookieStore.get(adminCookieNames.returnTo)?.value ?? '/';
+  cookieStore.delete(adminCookieNames.state);
+  cookieStore.delete(adminCookieNames.returnTo);
 
   return { state, returnTo };
 }
 
 export async function getOptionalSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get(cookieNames.accessToken)?.value;
-  const refreshToken = cookieStore.get(cookieNames.refreshToken)?.value;
-  const expiresAt = Number(cookieStore.get(cookieNames.expiresAt)?.value ?? '0');
-  const idToken = cookieStore.get(cookieNames.idToken)?.value ?? null;
+  const accessToken = cookieStore.get(adminCookieNames.accessToken)?.value;
+  const refreshToken = cookieStore.get(adminCookieNames.refreshToken)?.value;
+  const expiresAt = Number(cookieStore.get(adminCookieNames.expiresAt)?.value ?? '0');
+  const idToken = cookieStore.get(adminCookieNames.idToken)?.value ?? null;
 
   if (!accessToken || !refreshToken || !expiresAt) {
     return null;
@@ -257,18 +257,18 @@ export async function getOptionalSession(): Promise<AuthSession | null> {
 
 export async function requireAccessToken(returnTo = '/') {
   const session = await getOptionalSession();
+  const loginUrl = `${buildAdminAppUrl()}/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+  const refreshUrl = `${buildAdminAppUrl()}/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`;
 
   if (!session) {
-    redirect(buildAdminPublicPath(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`));
+    redirect(loginUrl);
   }
 
-  const activeSession = session;
-
-  if (activeSession.expiresAt <= Date.now() + refreshThresholdMs) {
-    redirect(buildAdminPublicPath(`/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`));
+  if (session.expiresAt <= Date.now() + refreshThresholdMs) {
+    redirect(refreshUrl);
   }
 
-  return activeSession.accessToken;
+  return session.accessToken;
 }
 
 export async function getOptionalAccessToken() {
@@ -297,4 +297,38 @@ export function buildLogoutUrl(idTokenHint?: string | null, requestHost?: string
   }
 
   return `${keycloakPublicUrl}/realms/${realm}/protocol/openid-connect/logout?${params.toString()}`;
+}
+
+export function buildAdminAppUrl(requestHost?: string | null) {
+  const defaultAppUrl =
+    process.env.ADMIN_URL ?? process.env.NEXT_PUBLIC_ADMIN_URL ?? process.env.APP_URL ?? 'http://localhost:3002';
+  return resolveAppUrl(defaultAppUrl, requestHost);
+}
+
+export function getAdminCookieOptions(requestHost?: string | null) {
+  const { secureCookies } = getConfig(requestHost);
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: secureCookies,
+    path: '/'
+  };
+}
+
+export function buildAdminLoginRequest(returnTo = '/', requestHost?: string | null) {
+  const { keycloakPublicUrl, realm, clientId, redirectUri } = getConfig(requestHost);
+  const state = crypto.randomUUID();
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid profile email',
+    state
+  });
+
+  return {
+    state,
+    returnTo,
+    authUrl: `${keycloakPublicUrl}/realms/${realm}/protocol/openid-connect/auth?${params.toString()}`
+  };
 }

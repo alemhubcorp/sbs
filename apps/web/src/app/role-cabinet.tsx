@@ -33,13 +33,14 @@ function cabinetCopy(viewer: MarketplaceViewer, variant: 'dashboard' | 'admin') 
   if (viewer.role === 'supplier') {
     return {
       eyebrow: 'Supplier cabinet',
-      title: variant === 'admin' ? 'Supplier operations and shipment control.' : 'RFQ inbox, quotes, deals, and shipments.',
+      title: variant === 'admin' ? 'Supplier operations, catalog, and shipment control.' : 'RFQ inbox, product catalog, deals, and shipments.',
       description:
-        'Use the role-aware surfaces that match the supplier flow. RFQs come in through the inbox, quotes are sent from the quote board, and deals progress to shipment.',
-      primary: { label: 'Open RFQ Inbox', href: '/quotes' },
-      secondary: { label: 'Open Deals', href: '/deals' },
+        'Use the role-aware surfaces that match the supplier flow. Product creation, RFQs, quotes, and deal progression stay in one authenticated workspace.',
+      primary: { label: 'Open Products', href: '/supplier/products' },
+      secondary: { label: 'Open RFQ Inbox', href: '/quotes' },
       cards: [
         { tag: 'Setup', title: 'Onboarding', body: 'Confirm company and banking basics before sending quotes.', href: '/onboarding', foot: 'Open onboarding →' },
+        { tag: 'Catalog', title: 'Products', body: 'Create, edit, publish, and unpublish supplier catalog records from one dashboard.', href: '/supplier/products', foot: 'Open product dashboard →' },
         { tag: 'Inbox', title: 'RFQ Inbox', body: 'Review incoming RFQs and send quotes from the live supplier board.', href: '/quotes', foot: 'Open inbox →' },
         { tag: 'Quotes', title: 'Sent quotes', body: 'Track submitted quotes and their accepted states from the deal pipeline.', href: '/deals', foot: 'View quotes →' },
         { tag: 'Deals', title: 'Deals', body: 'Follow accepted quotes into escrow, shipping, and completion.', href: '/deals', foot: 'Open deals →' },

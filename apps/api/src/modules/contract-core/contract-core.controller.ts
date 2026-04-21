@@ -63,7 +63,7 @@ export class ContractCoreController {
   @Header('Expires', '0')
   @Header('Surrogate-Control', 'no-store')
   listSupplierInboxRfqs(@CurrentAuthContext() authContext: ApiRequestLike['authContext']) {
-    return this.contractCoreService.listContractRfqs(authContext);
+    return this.contractCoreService.listSupplierInboxRfqs(authContext);
   }
 
   @Patch('rfq/:id/status')
@@ -179,8 +179,18 @@ export class ContractCoreController {
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
   @Header('Surrogate-Control', 'no-store')
-  fundRfqDeal(@Param('id') id: string, @CurrentAuthContext() authContext: ApiRequestLike['authContext']) {
-    return this.contractCoreService.progressContractRfqDeal(id, 'fund', authContext);
+  fundRfqDeal(
+    @Param('id') id: string,
+    @Body() body: unknown,
+    @Req() request: ApiRequestLike,
+    @CurrentAuthContext() authContext: ApiRequestLike['authContext']
+  ) {
+    return this.contractCoreService.progressContractRfqDeal(
+      id,
+      typeof body === 'object' && body !== null ? { ...(body as Record<string, unknown>), action: 'fund' } : { action: 'fund' },
+      authContext,
+      extractRequestAuditContext(request)
+    );
   }
 
   @Post('deals/:id/ship')

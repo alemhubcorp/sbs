@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: infra/docker/node-prod/Dockerfile
-    command: 
+    profiles: ["build"]
 
   traefik:
     image: traefik:v3.1
@@ -24,9 +24,6 @@ services:
 
   web:
     image: ruflo-node-prod:latest
-    build:
-      context: .
-      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/web"
     env_file: .env.example
@@ -44,25 +41,24 @@ services:
     ports:
       - "${WEB_PORT:-3001}:3001"
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.web.rule=Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)
-      - traefik.http.routers.web.entrypoints=web
-      - traefik.http.services.web.loadbalancer.server.port=3001
-      - traefik.docker.network=ruflo_project_ruflo
+      traefik.enable: "true"
+      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.http.routers.web.entrypoints: "web"
+      traefik.http.routers.web.rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      traefik.http.routers.web.priority: "10"
+      traefik.http.routers.web.middlewares: "forwarded-https@file"
+      traefik.http.services.web.loadbalancer.server.port: "3001"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3001 >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3001/signin >/dev/null || exit 1"]
       interval: 15s
-      timeout: 5s
-      retries: 8
-      start_period: 20s
+      timeout: 10s
+      retries: 12
+      start_period: 45s
     restart: unless-stopped
     networks: [ruflo]
 
   admin:
     image: ruflo-node-prod:latest
-    build:
-      context: .
-      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/admin"
     env_file: .env.example
@@ -81,19 +77,20 @@ services:
     ports:
       - "${ADMIN_PORT:-3002}:3002"
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.admin.rule=Host(`alemhub.sbs`) && PathPrefix(`/admin`)
-      - traefik.http.routers.admin.entrypoints=web
-      - traefik.http.services.admin.loadbalancer.server.port=3002
-      - traefik.docker.network=ruflo_project_ruflo
+      traefik.enable: "true"
+      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.http.middlewares.admin-compliance-redirect.redirectregex.regex: "^https?://alemhub\\.sbs/admin/compliance/?$"
+      traefik.http.middlewares.admin-compliance-redirect.redirectregex.replacement: "https://alemhub.sbs/compliance"
+      traefik.http.middlewares.admin-compliance-redirect.redirectregex.permanent: "false"
+      traefik.http.routers.admin.entrypoints: "web"
+      traefik.http.routers.admin.rule: "Host(`alemhub.sbs`) && PathPrefix(`/admin`)"
+      traefik.http.routers.admin.priority: "80"
+      traefik.http.services.admin.loadbalancer.server.port: "3002"
     restart: unless-stopped
     networks: [ruflo]
 
   api:
     image: ruflo-node-prod:latest
-    build:
-      context: .
-      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh scripts/start-api-prod.sh
     env_file: .env.example
@@ -106,8 +103,15 @@ services:
       KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-https://alemhub.sbs/auth/realms/ruflo}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
-      KEYCLOAK_BOOTSTRAP_ON_STARTUP: "true"
+      KEYCLOAK_BOOTSTRAP_ON_STARTUP: "false"
       PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1"
+      SMTP_ENABLED: "true"
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      SMTP_FROM: ${SMTP_FROM:-noreply@alemhub.sbs}
+      SMTP_REPLY_TO: ${SMTP_REPLY_TO:-support@alemhub.sbs}
+      SMTP_SUPPORT_EMAIL: ${SMTP_SUPPORT_EMAIL:-support@alemhub.sbs}
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,14 +123,18 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     ports:
       - "${API_PORT:-3000}:3000"
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.api.rule=Host(`alemhub.sbs`) && PathPrefix(`/api`)
-      - traefik.http.routers.api.entrypoints=web
-      - traefik.http.services.api.loadbalancer.server.port=3000
-      - traefik.docker.network=ruflo_project_ruflo
+      traefik.enable: "true"
+      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.http.routers.api.entrypoints: "web"
+      traefik.http.routers.api.rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
+      traefik.http.routers.api.priority: "90"
+      traefik.http.routers.api.middlewares: "forwarded-https@file"
+      traefik.http.services.api.loadbalancer.server.port: "3000"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/health/readiness | grep -q '\"status\":\"ready\"' || exit 1"]
       interval: 15s
@@ -136,11 +144,16 @@ services:
     restart: unless-stopped
     networks: [ruflo]
 
+  mailpit:
+    image: axllent/mailpit:v1.26
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+    restart: unless-stopped
+    networks: [ruflo]
+
   worker:
     image: ruflo-node-prod:latest
-    build:
-      context: .
-      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/worker"
     env_file: .env.example
@@ -160,9 +173,6 @@ services:
 
   ai-worker:
     image: ruflo-node-prod:latest
-    build:
-      context: .
-      dockerfile: infra/docker/node-prod/Dockerfile
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/ai-worker"
     env_file: .env.example
@@ -290,11 +300,12 @@ services:
     ports:
       - "${KEYCLOAK_PORT:-8080}:8080"
     labels:
-      - traefik.enable=true
-      - traefik.http.routers.auth.rule=Host(`alemhub.sbs`) && PathPrefix(`/auth`)
-      - traefik.http.routers.auth.entrypoints=web
-      - traefik.http.services.auth.loadbalancer.server.port=8080
-      - traefik.docker.network=ruflo_project_ruflo
+      traefik.enable: "true"
+      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.http.routers.auth.entrypoints: "web"
+      traefik.http.routers.auth.rule: "Host(`alemhub.sbs`) && PathPrefix(`/auth`)"
+      traefik.http.routers.auth.priority: "100"
+      traefik.http.services.auth.loadbalancer.server.port: "8080"
     healthcheck:
       test:
         - CMD-SHELL

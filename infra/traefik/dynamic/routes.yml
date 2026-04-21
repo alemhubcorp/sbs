@@ -1,65 +1,83 @@
 http:
   middlewares:
+    admin-root-redirect:
+      redirectRegex:
+        regex: "^https?://alemhub\\.sbs/admin/?$"
+        replacement: "https://alemhub.sbs/admin/auth/login"
+        permanent: false
+    admin-compliance-redirect:
+      redirectRegex:
+        regex: "^https?://alemhub\\.sbs/admin/compliance/?$"
+        replacement: "https://alemhub.sbs/compliance"
+        permanent: false
     forwarded-https:
       headers:
         customRequestHeaders:
           X-Forwarded-Proto: "https"
+          X-Forwarded-Host: "alemhub.sbs"
           X-Forwarded-Port: "443"
 
   routers:
-    web:
+    admin-root:
+      rule: "Host(`alemhub.sbs`) && (Path(`/admin`) || Path(`/admin/`))"
       entryPoints:
         - web
-      rule: Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)
-      service: web
+      middlewares:
+        - admin-root-redirect
+      service: admin
+      priority: 110
+
+    web:
+      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      entryPoints:
+        - web
       middlewares:
         - forwarded-https
-      priority: 10
+      service: web
 
     admin:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/admin`)"
       entryPoints:
         - web
-      rule: Host(`alemhub.sbs`) && PathPrefix(`/admin`)
-      service: admin
       middlewares:
+        - admin-compliance-redirect
         - forwarded-https
+      service: admin
       priority: 80
 
     api:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
       entryPoints:
         - web
-      rule: Host(`alemhub.sbs`) && PathPrefix(`/api`)
-      service: api
       middlewares:
         - forwarded-https
+      service: api
       priority: 90
 
     auth:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/auth`)"
       entryPoints:
         - web
-      rule: Host(`alemhub.sbs`) && PathPrefix(`/auth`)
       service: auth
-      middlewares:
-        - forwarded-https
       priority: 100
 
   services:
     web:
       loadBalancer:
         servers:
-          - url: http://web:3001
+          - url: "http://web:3001"
 
     admin:
       loadBalancer:
         servers:
-          - url: http://admin:3002
+          - url: "http://admin:3002"
 
     api:
       loadBalancer:
         servers:
-          - url: http://api:3000
+          - url: "http://api:3000"
 
     auth:
       loadBalancer:
         servers:
-          - url: http://keycloak:8080
+          - url: "http://keycloak:8080"

@@ -5,6 +5,7 @@ import { ApprovalService } from '../../app/approval.service.js';
 import { ApprovalPolicyService } from '../../app/approval-policy.service.js';
 import type { AuthContext, RequestAuditContext } from '../../app/auth-context.js';
 import { ResourceAccessService } from '../../app/resource-access.service.js';
+import { AdminOpsService } from '../admin-ops/admin-ops.service.js';
 import { AuditService } from '../audit-observability/audit.service.js';
 import { NotificationService } from '../notifications-core/notification.service.js';
 import { PaymentCoreService } from '../payment-core/payment-core.service.js';
@@ -54,7 +55,17 @@ const updateContractRfqQuoteStatusSchema = z.object({
   status: z.enum(['submitted', 'accepted', 'rejected'])
 });
 
-const updateContractRfqDealActionSchema = z.enum(['fund', 'ship', 'confirm', 'dispute']);
+const updateContractRfqDealActionSchema = z.object({
+  action: z.enum(['fund', 'ship', 'confirm', 'dispute']),
+  consents: z
+    .array(
+      z.object({
+        documentSlug: z.string().trim().min(1).max(120),
+        version: z.string().trim().min(1).max(40)
+      })
+    )
+    .default([])
+});
 const dealPaymentMethodSchema = z.object({
   method: z.enum(['swift', 'iban_invoice', 'manual', 'bank_transfer']),
   provider: z.enum(['internal_manual', 'airwallex', 'none']).optional(),
@@ -65,6 +76,7 @@ const dealPaymentMethodSchema = z.object({
 export class ContractCoreService {
   constructor(
     @Inject(ContractCoreRepository) private readonly contractCoreRepository: ContractCoreRepository,
+    @Inject(AdminOpsService) private readonly adminOpsService: AdminOpsService,
     @Inject(AuditService) private readonly auditService: AuditService,
     @Inject(NotificationService) private readonly notificationService: NotificationService,
     @Inject(ApprovalService) private readonly approvalService: ApprovalService,
@@ -223,7 +235,14 @@ export class ContractCoreService {
 
   listContractRfqs(authContext?: AuthContext) {
     const actor = this.requireMarketplaceUser(authContext);
-    return this.contractCoreRepository.listContractRfqsForUser(actor);
+    this.ensureBuyerRole(authContext);
+    return this.contractCoreRepository.listContractRfqsForBuyer(actor);
+  }
+
+  listSupplierInboxRfqs(authContext?: AuthContext) {
+    const actor = this.requireMarketplaceUser(authContext);
+    this.ensureSupplierRole(authContext);
+    return this.contractCoreRepository.listContractRfqsForSupplier(actor);
   }
 
   updateContractRfqStatus(id: string, input: unknown, authContext?: AuthContext) {
@@ -326,18 +345,24 @@ export class ContractCoreService {
     return this.contractCoreRepository.listContractRfqDealsForUser(actor);
   }
 
-  async progressContractRfqDeal(id: string, action: unknown, authContext?: AuthContext) {
+  async progressContractRfqDeal(id: string, action: unknown, authContext?: AuthContext, auditContext?: RequestAuditContext) {
     const actor = this.requireMarketplaceUser(authContext);
-    const parsed = updateContractRfqDealActionSchema.parse(action);
+    const parsed = updateContractRfqDealActionSchema.parse(
+      typeof action === 'string'
+        ? {
+            action
+          }
+        : action
+    );
     const deal = await this.contractCoreRepository.getContractRfqDealByIdForUser(id, actor);
 
-    if (parsed === 'fund' || parsed === 'confirm') {
+    if (parsed.action === 'fund' || parsed.action === 'confirm') {
       this.ensureBuyerRole(authContext);
 
       if (deal.buyerUserId !== actor) {
         throw new ForbiddenException('Only the buyer can perform this deal action.');
       }
-    } else if (parsed === 'ship') {
+    } else if (parsed.action === 'ship') {
       this.ensureSupplierRole(authContext);
 
       if (deal.supplierUserId !== actor) {
@@ -347,7 +372,8 @@ export class ContractCoreService {
       throw new ForbiddenException('Only deal participants can open a dispute.');
     }
 
-    if (parsed === 'fund') {
+    if (parsed.action === 'fund') {
+      await this.adminOpsService.validateRequiredConsents('deal_funding', parsed.consents);
       const payment = await this.paymentCoreService.confirmDealPayment(
         {
           id: deal.id,
@@ -396,18 +422,27 @@ export class ContractCoreService {
         'Payment instructions were submitted. The deal will move to escrow once payment is confirmed.'
       );
 
+      await this.adminOpsService.recordConsents('deal_funding', parsed.consents, {
+        userId: authContext?.internalUserId ?? null,
+        entityType: 'contract-rfq-deal',
+        entityId: id,
+        metadata: {
+          correlationId: auditContext?.correlationId ?? `deal-fund-${id}`
+        }
+      });
+
       return this.contractCoreRepository.getContractRfqDealByIdForUser(id, actor);
     }
 
-    const updated = await this.contractCoreRepository.progressContractRfqDeal(id, parsed);
+    const updated = await this.contractCoreRepository.progressContractRfqDeal(id, parsed.action);
 
     await this.emitDealNotification(
       updated,
-      `contract.deal.${parsed}`,
-      parsed === 'ship' ? 'Deal shipped' : parsed === 'confirm' ? 'Delivery confirmed' : 'Deal disputed',
-      parsed === 'ship'
+      `contract.deal.${parsed.action}`,
+      parsed.action === 'ship' ? 'Deal shipped' : parsed.action === 'confirm' ? 'Delivery confirmed' : 'Deal disputed',
+      parsed.action === 'ship'
         ? 'The supplier marked the deal as shipped.'
-        : parsed === 'confirm'
+        : parsed.action === 'confirm'
           ? 'The buyer confirmed delivery.'
           : 'The deal has been moved to dispute review.'
     );

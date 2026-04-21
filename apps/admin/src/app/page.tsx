@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import {
   approveApprovalAction,
   assignRolesAction,
@@ -31,9 +32,85 @@ import { getAdminDashboardData } from '../lib/api';
 
 export const dynamic = 'force-dynamic';
 
+const sectionGrid = (columns: string): CSSProperties => {
+  let gridTemplateColumns = columns;
+
+  if (columns === 'repeat(4, minmax(0, 1fr))') {
+    gridTemplateColumns = 'repeat(auto-fit, minmax(180px, 1fr))';
+  } else if (columns === 'repeat(3, minmax(0, 1fr))') {
+    gridTemplateColumns = 'repeat(auto-fit, minmax(240px, 1fr))';
+  } else if (columns === 'repeat(2, minmax(0, 1fr))' || columns === '2fr 1fr') {
+    gridTemplateColumns = 'repeat(auto-fit, minmax(280px, 1fr))';
+  }
+
+  return {
+    display: 'grid',
+    gridTemplateColumns,
+    gap: 18
+  };
+};
+
+const panelStyle: CSSProperties = {
+  padding: 22,
+  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 249, 245, 0.96) 100%)',
+  border: '1px solid rgba(148, 163, 184, 0.18)',
+  borderRadius: 26,
+  boxShadow: '0 20px 42px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.65)'
+};
+
+const accentPanelStyle: CSSProperties = {
+  ...panelStyle,
+  background: 'linear-gradient(180deg, rgba(235, 255, 244, 0.96) 0%, rgba(247, 250, 245, 0.96) 100%)'
+};
+
+const tonePanelStyle: CSSProperties = {
+  ...panelStyle,
+  background: 'linear-gradient(180deg, rgba(243, 247, 255, 0.96) 0%, rgba(250, 250, 248, 0.98) 100%)'
+};
+
+const metricValueStyle: CSSProperties = {
+  fontSize: 36,
+  lineHeight: 1,
+  margin: '10px 0 6px',
+  fontWeight: 700,
+  letterSpacing: '-0.05em',
+  color: '#0f172a'
+};
+
+const cardTitleStyle: CSSProperties = {
+  marginTop: 0,
+  marginBottom: 10,
+  color: '#0f172a'
+};
+
+const eyebrowStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8,
+  width: 'fit-content',
+  padding: '8px 12px',
+  borderRadius: 999,
+  background: 'rgba(255, 255, 255, 0.82)',
+  border: '1px solid rgba(148, 163, 184, 0.2)',
+  fontSize: 12,
+  letterSpacing: '0.12em',
+  textTransform: 'uppercase',
+  color: '#0f766e'
+};
+
+const sectionLeadStyle: CSSProperties = {
+  marginTop: 0,
+  color: '#64748b',
+  lineHeight: 1.7
+};
+
 export default async function AdminHomePage() {
   const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM ?? 'ruflo';
   const dashboard = await getAdminDashboardData();
+  const dashboardExtras = dashboard as typeof dashboard & {
+    notifications?: unknown[];
+    auditEvents?: unknown[];
+  };
   const authContext = (dashboard.authContext ?? null) as {
     email?: string | null;
     username?: string | null;
@@ -51,7 +128,7 @@ export default async function AdminHomePage() {
     reason?: string | null;
     createdAt?: string;
   }>;
-  const notifications = dashboard.notifications as Array<{
+  const notifications = (dashboardExtras.notifications ?? []) as Array<{
     id?: string;
     userId?: string;
     type?: string;
@@ -60,7 +137,7 @@ export default async function AdminHomePage() {
     read?: boolean;
     createdAt?: string;
   }>;
-  const auditEvents = dashboard.auditEvents as Array<{
+  const auditEvents = (dashboardExtras.auditEvents ?? []) as Array<{
     id?: string;
     module?: string;
     eventType?: string;
@@ -189,57 +266,371 @@ export default async function AdminHomePage() {
     notes?: string | null;
   }>;
   const rfqOptions = wholesaleRfqs.length > 0 ? wholesaleRfqs : [];
+  const pendingApprovals = approvals.filter((approval) => approval.status !== 'approved').length;
+  const openDisputes = disputes.filter((dispute) => dispute.status !== 'resolved' && dispute.status !== 'closed').length;
+  const activeDeals = wholesaleDeals.filter((deal) => deal.status !== 'cancelled' && deal.status !== 'closed').length;
+  const escrowExposure = paymentTransactions.reduce((sum, transaction) => sum + (transaction.heldAmountMinor ?? 0), 0);
+  const logisticsActive = logisticsProviders.filter((provider) => provider.status === 'active').length;
 
   return (
-    <section style={{ display: 'grid', gap: 24 }}>
-      <h1>Admin Control Center</h1>
-      <p>
-        Authenticated via Keycloak realm <strong>{keycloakRealm}</strong> as{' '}
-        <strong>{authContext?.email ?? authContext?.username ?? 'unknown-user'}</strong>.
-      </p>
-      <p>
-        Tenant context: <strong>{authContext?.tenantId ?? 'platform'}</strong> | Roles:{' '}
-        <strong>{authContext?.roles?.join(', ') || 'none'}</strong> | <a href="/admin/auth/logout">Logout</a>
-      </p>
-      <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-        <a href="#identity">Identity</a>
-        <a href="#catalog">Catalog</a>
-        <a href="#wholesale">Wholesale</a>
-        <a href="#contracts">Contracts</a>
-        <a href="#payments">Payments</a>
-        <a href="#logistics">Logistics</a>
-        <a href="/admin/partners">Partners</a>
-        <a href="/admin/settings/smtp">SMTP Settings</a>
-        <a href="#approvals">Approvals</a>
-        <a href="#ops">Notifications / Audit</a>
-      </nav>
-      <div id="identity" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#1f2937', borderRadius: 12 }}>
-          <h2 style={{ marginTop: 0 }}>API Health</h2>
+    <section className="admin-dashboard" style={{ display: 'grid', gap: 24 }}>
+      <style>{`
+        .admin-dashboard {
+          color: #334155;
+        }
+
+        .admin-dashboard section[id],
+        .admin-dashboard div[id] {
+          scroll-margin-top: 24px;
+        }
+
+        .admin-dashboard a {
+          color: #0f766e;
+          text-decoration: none;
+        }
+
+        .admin-dashboard a:hover {
+          color: #0f172a;
+        }
+
+        .admin-dashboard nav a {
+          display: inline-flex;
+          align-items: center;
+          min-height: 40px;
+          padding: 0 16px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.84);
+          border: 1px solid rgba(148, 163, 184, 0.18);
+          box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+          font-weight: 600;
+        }
+
+        .admin-dashboard form {
+          display: grid;
+          gap: 10px;
+          padding: 16px;
+          border-radius: 20px;
+          background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(255, 255, 255, 0.72) 100%);
+          border: 1px solid rgba(148, 163, 184, 0.14);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        }
+
+        .admin-dashboard input,
+        .admin-dashboard select,
+        .admin-dashboard textarea,
+        .admin-dashboard button {
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 14px;
+          border: 1px solid rgba(148, 163, 184, 0.28);
+          padding: 12px 14px;
+          font: inherit;
+          transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+        }
+
+        .admin-dashboard input,
+        .admin-dashboard select,
+        .admin-dashboard textarea {
+          background: rgba(255, 255, 255, 0.92);
+          color: #0f172a;
+          box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .admin-dashboard input:focus,
+        .admin-dashboard select:focus,
+        .admin-dashboard textarea:focus {
+          outline: none;
+          border-color: rgba(15, 118, 110, 0.5);
+          box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.12);
+        }
+
+        .admin-dashboard button {
+          background: linear-gradient(135deg, #0f766e 0%, #14532d 100%);
+          color: #f8fafc;
+          border: none;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 12px 24px rgba(20, 83, 45, 0.18);
+        }
+
+        .admin-dashboard button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 14px 30px rgba(20, 83, 45, 0.22);
+        }
+
+        .admin-dashboard pre,
+        .admin-dashboard code {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        }
+
+        .admin-dashboard ul {
+          color: #475569;
+          line-height: 1.7;
+        }
+
+        .admin-dashboard li + li {
+          margin-top: 8px;
+        }
+
+        .admin-dashboard h2 {
+          color: #0f172a;
+          letter-spacing: -0.03em;
+        }
+
+        .admin-dashboard h3 {
+          color: #0f172a;
+          letter-spacing: -0.02em;
+        }
+
+        .admin-dashboard article {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .admin-dashboard article::before {
+          content: '';
+          position: absolute;
+          inset: 0 auto auto 0;
+          width: 100%;
+          height: 1px;
+          background: linear-gradient(90deg, rgba(15, 118, 110, 0.22), rgba(15, 23, 42, 0));
+          pointer-events: none;
+        }
+
+        .admin-dashboard [data-kpi-grid] article p:last-child,
+        .admin-dashboard [data-kpi-grid] article div:last-child {
+          color: #64748b;
+        }
+
+        @media (max-width: 1100px) {
+          .admin-dashboard [data-grid="triple"],
+          .admin-dashboard [data-grid="double"] {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+
+      <section
+        style={{
+          ...tonePanelStyle,
+          padding: 28,
+          overflow: 'hidden',
+          position: 'relative'
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle at top right, rgba(16, 185, 129, 0.14), transparent 30%), radial-gradient(circle at left center, rgba(59, 130, 246, 0.08), transparent 28%)',
+            pointerEvents: 'none'
+          }}
+        />
+        <div style={{ position: 'relative', display: 'grid', gap: 22 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 12,
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <div style={{ display: 'grid', gap: 12, maxWidth: 820 }}>
+              <div
+                style={eyebrowStyle}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#10b981',
+                    boxShadow: '0 0 0 5px rgba(16, 185, 129, 0.12)'
+                  }}
+                />
+                Marketplace stability cockpit
+              </div>
+              <div>
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: 48,
+                    lineHeight: 0.95,
+                    letterSpacing: '-0.06em',
+                    color: '#0f172a'
+                  }}
+                >
+                  Admin Control Center
+                </h1>
+                <p style={{ margin: '14px 0 0', fontSize: 18, lineHeight: 1.7, color: '#334155' }}>
+                  High-trust oversight for approvals, escrow, and supply orchestration. The surface is styled for
+                  operators, but the underlying workflows remain unchanged.
+                </p>
+              </div>
+            </div>
+            <div
+              style={{
+                minWidth: 260,
+                padding: 20,
+                borderRadius: 24,
+                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(248, 250, 252, 0.78) 100%)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                boxShadow: '0 14px 30px rgba(15, 23, 42, 0.06)'
+              }}
+            >
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748b' }}>
+                Operator session
+              </div>
+              <div style={{ marginTop: 10, fontWeight: 700, color: '#0f172a' }}>
+                {authContext?.email ?? authContext?.username ?? 'unknown-user'}
+              </div>
+              <div style={{ marginTop: 6 }}>Realm: {keycloakRealm}</div>
+              <div style={{ marginTop: 6 }}>Tenant: {authContext?.tenantId ?? 'platform'}</div>
+              <div style={{ marginTop: 6 }}>Roles: {authContext?.roles?.join(', ') || 'none'}</div>
+              <div style={{ marginTop: 12 }}>
+                <a href="/admin/auth/logout">Logout</a>
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gap: 16,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'
+            }}
+          >
+            <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              <a href="#identity">Identity</a>
+              <a href="#catalog">Catalog</a>
+              <a href="#wholesale">Wholesale</a>
+              <a href="#contracts">Contracts</a>
+              <a href="#payments">Payments</a>
+              <a href="#logistics">Logistics</a>
+              <a href="/admin/partners">Partners</a>
+              <a href="/admin/users">Users</a>
+              <a href="/admin/settings/platform">Platform Settings</a>
+              <a href="/admin/settings/legal">Legal Settings</a>
+              <a href="/admin/settings/smtp">SMTP Settings</a>
+              <a href="#approvals">Approvals</a>
+              <a href="#ops">Notifications / Audit</a>
+            </nav>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                gap: 10
+              }}
+            >
+              {[
+                { label: 'Roles', value: authContext?.roles?.length ?? 0 },
+                { label: 'Permissions', value: authContext?.permissions?.length ?? 0 },
+                { label: 'Approvals', value: pendingApprovals }
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    padding: '14px 12px',
+                    borderRadius: 18,
+                    background: 'rgba(255, 255, 255, 0.74)',
+                    border: '1px solid rgba(148, 163, 184, 0.16)',
+                    textAlign: 'center'
+                  }}
+                >
+                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#64748b' }}>
+                    {item.label}
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 24, fontWeight: 700, color: '#0f172a' }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div data-grid="triple" data-kpi-grid="true" style={sectionGrid('repeat(4, minmax(0, 1fr))')}>
+            <article style={panelStyle}>
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748b' }}>
+                Active Deals
+              </div>
+              <p style={metricValueStyle}>{activeDeals}</p>
+              <p style={{ margin: 0 }}>Live wholesale deals still in motion.</p>
+            </article>
+            <article style={panelStyle}>
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748b' }}>
+                Logistics Ready
+              </div>
+              <p style={metricValueStyle}>{logisticsActive}</p>
+              <p style={{ margin: 0 }}>Providers currently marked active.</p>
+            </article>
+            <article style={accentPanelStyle}>
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#0f766e' }}>
+                Open Disputes
+              </div>
+              <p style={metricValueStyle}>{openDisputes}</p>
+              <p style={{ margin: 0 }}>Cases that still need an operator decision.</p>
+            </article>
+            <article style={tonePanelStyle}>
+              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748b' }}>
+                Escrow Held
+              </div>
+              <p style={metricValueStyle}>${(escrowExposure / 100).toFixed(2)}</p>
+              <p style={{ margin: 0 }}>Funds preserved inside protected flows.</p>
+            </article>
+          </div>
+
+          <div data-grid="double" style={sectionGrid('2fr 1fr')}>
+        <article style={panelStyle}>
+          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748b' }}>
+            Executive focus
+          </div>
+          <p style={{ margin: '12px 0 0', lineHeight: 1.8, color: '#475569' }}>
+            Control sensitive marketplace motion across identity, approvals, payments, and logistics. This page now
+            emphasizes exception handling and live operating posture instead of exposing a flat wall of forms.
+          </p>
+        </article>
+        <article style={accentPanelStyle}>
+          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#0f766e' }}>
+            Escrow posture
+          </div>
+          <p style={{ margin: '12px 0 0', lineHeight: 1.8, color: '#475569' }}>
+            Funds on hold: <strong>${(escrowExposure / 100).toFixed(2)}</strong>. Open disputes: <strong>{openDisputes}</strong>.
+            Validate releases against the payments section before moving funds.
+          </p>
+        </article>
+          </div>
+        </div>
+      </section>
+
+      <div id="identity" data-grid="triple" style={sectionGrid('repeat(4, minmax(0, 1fr))')}>
+        <article style={tonePanelStyle}>
+          <h2 style={cardTitleStyle}>API Health</h2>
+          <p style={sectionLeadStyle}>Operational heartbeat from the live backend.</p>
           <pre style={{ whiteSpace: 'pre-wrap', margin: 0, fontSize: 12 }}>
             {JSON.stringify(dashboard.health, null, 2)}
           </pre>
         </article>
-        <article style={{ padding: 16, background: '#1f2937', borderRadius: 12 }}>
-          <h2 style={{ marginTop: 0 }}>Tenants</h2>
-          <p style={{ fontSize: 28, margin: '8px 0' }}>{dashboard.tenants.length}</p>
+        <article style={panelStyle}>
+          <h2 style={cardTitleStyle}>Tenants</h2>
+          <p style={metricValueStyle}>{dashboard.tenants.length}</p>
           <p style={{ marginBottom: 0 }}>Live list from <code>/api/tenants</code></p>
         </article>
-        <article style={{ padding: 16, background: '#1f2937', borderRadius: 12 }}>
-          <h2 style={{ marginTop: 0 }}>Users</h2>
-          <p style={{ fontSize: 28, margin: '8px 0' }}>{dashboard.users.length}</p>
+        <article style={panelStyle}>
+          <h2 style={cardTitleStyle}>Users</h2>
+          <p style={metricValueStyle}>{dashboard.users.length}</p>
           <p style={{ marginBottom: 0 }}>Live list from <code>/api/identity/users</code></p>
         </article>
-        <article style={{ padding: 16, background: '#1f2937', borderRadius: 12 }}>
-          <h2 style={{ marginTop: 0 }}>Pending Approvals</h2>
-          <p style={{ fontSize: 28, margin: '8px 0' }}>{approvals.length}</p>
+        <article style={accentPanelStyle}>
+          <h2 style={cardTitleStyle}>Pending Approvals</h2>
+          <p style={metricValueStyle}>{pendingApprovals}</p>
           <p style={{ marginBottom: 0 }}>Critical actions are routed through <code>/api/admin/approvals</code></p>
         </article>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
-          <h2 style={{ marginTop: 0 }}>Recent Tenants</h2>
+      <div data-grid="double" style={sectionGrid('repeat(2, minmax(0, 1fr))')}>
+        <article style={panelStyle}>
+          <h2 style={cardTitleStyle}>Recent Tenants</h2>
+          <p style={sectionLeadStyle}>Latest tenant records currently surfaced to the console.</p>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {dashboard.tenants.slice(0, 5).map((tenant, index) => {
               const record = tenant as { id?: string; name?: string; slug?: string; status?: string };
@@ -252,8 +643,9 @@ export default async function AdminHomePage() {
             })}
           </ul>
         </article>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
-          <h2 style={{ marginTop: 0 }}>Recent Users</h2>
+        <article style={panelStyle}>
+          <h2 style={cardTitleStyle}>Recent Users</h2>
+          <p style={sectionLeadStyle}>Recent identity records from the current runtime.</p>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {dashboard.users.slice(0, 5).map((user, index) => {
               const record = user as {
@@ -275,9 +667,10 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div id="approvals" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+      <div id="approvals" data-grid="double" style={sectionGrid('repeat(2, minmax(0, 1fr))')}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Approval Queue</h2>
+          <p style={sectionLeadStyle}>Pending actions that affect access, movement, or compliance posture.</p>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {approvals.length === 0 ? <li>No pending approvals.</li> : null}
             {approvals.slice(0, 10).map((approval) => (
@@ -287,8 +680,9 @@ export default async function AdminHomePage() {
             ))}
           </ul>
         </article>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Approval Actions</h2>
+          <p style={sectionLeadStyle}>Operator controls for resolving approval records.</p>
           <form action={approveApprovalAction} style={{ display: 'grid', gap: 8 }}>
             <select name="approvalId" defaultValue={approvals[0]?.id ?? ''} required>
               {approvals.map((approval) => (
@@ -314,10 +708,10 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div id="ops" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+      <div id="ops" data-grid="double" style={sectionGrid('repeat(2, minmax(0, 1fr))')}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Notifications</h2>
-          <p style={{ marginTop: 0 }}>Recent in-app notifications and system messages.</p>
+          <p style={sectionLeadStyle}>Recent in-app notifications and system messages.</p>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {notifications.length === 0 ? <li>No notifications yet.</li> : null}
             {notifications.slice(0, 8).map((notification) => (
@@ -327,9 +721,9 @@ export default async function AdminHomePage() {
             ))}
           </ul>
         </article>
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Audit Trail</h2>
-          <p style={{ marginTop: 0 }}>Backend append-only event log.</p>
+          <p style={sectionLeadStyle}>Backend append-only event log.</p>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {auditEvents.length === 0 ? <li>No audit events yet.</li> : null}
             {auditEvents.slice(0, 8).map((event) => (
@@ -341,8 +735,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div id="catalog" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+      <div id="catalog" data-grid="triple" style={sectionGrid('repeat(3, minmax(0, 1fr))')}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Org Units</h2>
           <p style={{ marginTop: 0 }}>Existing org units: {dashboard.orgUnits.length}</p>
           <form action={createOrgUnitAction} style={{ display: 'grid', gap: 8 }}>
@@ -376,7 +770,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Memberships</h2>
           <p style={{ marginTop: 0 }}>Existing memberships: {dashboard.memberships.length}</p>
           <form action={createMembershipAction} style={{ display: 'grid', gap: 8 }}>
@@ -427,7 +821,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Role Assignment</h2>
           <form action={assignRolesAction} style={{ display: 'grid', gap: 8 }}>
             <select name="userId" defaultValue={userOptions[0]?.id ?? ''} required>
@@ -454,8 +848,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div id="wholesale" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+      <div id="wholesale" data-grid="triple" style={sectionGrid('repeat(3, minmax(0, 1fr))')}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Categories</h2>
           <p style={{ marginTop: 0 }}>Existing categories: {dashboard.categories.length}</p>
           <form action={createCategoryAction} style={{ display: 'grid', gap: 8 }}>
@@ -474,7 +868,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Seller Profiles</h2>
           <p style={{ marginTop: 0 }}>Existing seller profiles: {dashboard.sellerProfiles.length}</p>
           <form action={createSellerProfileAction} style={{ display: 'grid', gap: 8 }}>
@@ -503,7 +897,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Products</h2>
           <p style={{ marginTop: 0 }}>Existing products: {dashboard.products.length}</p>
           <form action={createProductAction} style={{ display: 'grid', gap: 8 }}>
@@ -544,8 +938,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+      <div data-grid="double" style={sectionGrid('repeat(2, minmax(0, 1fr))')}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Retail Orders</h2>
           <p style={{ marginTop: 0 }}>Existing orders: {dashboard.retailOrders.length}</p>
           <form action={createRetailOrderAction} style={{ display: 'grid', gap: 8 }}>
@@ -567,7 +961,7 @@ export default async function AdminHomePage() {
             <button type="submit">Create Retail Order</button>
           </form>
         </article>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Retail Order State</h2>
           <form action={updateRetailOrderStatusAction} style={{ display: 'grid', gap: 8 }}>
             <select name="orderId" defaultValue={retailOrders[0]?.id ?? ''} required>
@@ -587,8 +981,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+      <div data-grid="double" style={sectionGrid('repeat(2, minmax(0, 1fr))')}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Catalog Snapshot</h2>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {categoryOptions.slice(0, 5).map((category) => (
@@ -598,7 +992,7 @@ export default async function AdminHomePage() {
             ))}
           </ul>
         </article>
-        <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+        <article style={panelStyle}>
           <h2 style={{ marginTop: 0 }}>Products Snapshot</h2>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {productOptions.slice(0, 5).map((product) => (
@@ -610,7 +1004,7 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <article style={{ padding: 16, background: '#111827', border: '1px solid #374151', borderRadius: 12 }}>
+      <article style={panelStyle}>
         <h2 style={{ marginTop: 0 }}>Retail Orders Snapshot</h2>
         <ul style={{ paddingLeft: 20, margin: 0 }}>
           {retailOrders.slice(0, 5).map((order) => (
@@ -622,8 +1016,8 @@ export default async function AdminHomePage() {
         </ul>
       </article>
 
-      <div id="contracts" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}>
+      <div id="contracts" data-grid="triple" style={sectionGrid('repeat(3, minmax(0, 1fr))')}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Wholesale RFQs</h2>
           <p style={{ marginTop: 0 }}>Existing RFQs: {wholesaleRfqs.length}</p>
           <form action={createWholesaleRfqAction} style={{ display: 'grid', gap: 8 }}>
@@ -670,7 +1064,7 @@ export default async function AdminHomePage() {
           </ul>
         </article>
 
-        <article style={{ padding: 16, background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Quotes</h2>
           <p style={{ marginTop: 0 }}>Submit supplier response against an RFQ.</p>
           <form action={submitWholesaleQuoteAction} style={{ display: 'grid', gap: 8 }}>
@@ -715,7 +1109,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Deals</h2>
           <p style={{ marginTop: 0 }}>Central wholesale aggregate and deal-room summary.</p>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
@@ -731,9 +1125,9 @@ export default async function AdminHomePage() {
                 key={deal.id}
                 style={{
                   padding: 12,
-                  background: '#111827',
-                  border: '1px solid #374151',
-                  borderRadius: 10
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  border: '1px solid rgba(148, 163, 184, 0.2)',
+                  borderRadius: 18
                 }}
               >
                 <strong>{deal.rfq?.title ?? deal.id}</strong>
@@ -753,8 +1147,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}>
+      <div data-grid="triple" style={sectionGrid('repeat(3, minmax(0, 1fr))')}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Contracts</h2>
           <p style={{ marginTop: 0 }}>Linked contract records: {contracts.length}</p>
           <form action={createContractAction} style={{ display: 'grid', gap: 8 }}>
@@ -797,7 +1191,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Documents</h2>
           <p style={{ marginTop: 0 }}>Storage metadata only: {documents.length}</p>
           <form action={createDocumentAction} style={{ display: 'grid', gap: 8 }}>
@@ -880,7 +1274,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#0f172a', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={tonePanelStyle}>
           <h2 style={{ marginTop: 0 }}>Contract / Document Snapshot</h2>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {contracts.slice(0, 5).map((contract) => (
@@ -899,8 +1293,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div id="payments" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+      <div id="payments" data-grid="triple" style={sectionGrid('repeat(3, minmax(0, 1fr))')}>
+        <article style={accentPanelStyle}>
           <h2 style={{ marginTop: 0 }}>Payments / Escrow</h2>
           <p style={{ marginTop: 0 }}>Transactions: {paymentTransactions.length}</p>
           <form action={createPaymentTransactionAction} style={{ display: 'grid', gap: 8 }}>
@@ -953,7 +1347,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={accentPanelStyle}>
           <h2 style={{ marginTop: 0 }}>Disputes</h2>
           <p style={{ marginTop: 0 }}>Recorded disputes: {disputes.length}</p>
           <form action={createDisputeAction} style={{ display: 'grid', gap: 8 }}>
@@ -990,7 +1384,7 @@ export default async function AdminHomePage() {
           </ul>
         </article>
 
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={accentPanelStyle}>
           <h2 style={{ marginTop: 0 }}>Financial Snapshot</h2>
           <ul style={{ paddingLeft: 20, margin: 0 }}>
             {paymentTransactions.slice(0, 5).map((transaction) => (
@@ -1005,8 +1399,8 @@ export default async function AdminHomePage() {
         </article>
       </div>
 
-      <div id="logistics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+      <div id="logistics" data-grid="triple" style={sectionGrid('repeat(3, minmax(0, 1fr))')}>
+        <article style={accentPanelStyle}>
           <h2 style={{ marginTop: 0 }}>Logistics Providers</h2>
           <p style={{ marginTop: 0 }}>Providers: {logisticsProviders.length}</p>
           <form action={createLogisticsProviderAction} style={{ display: 'grid', gap: 8 }}>
@@ -1031,7 +1425,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={accentPanelStyle}>
           <h2 style={{ marginTop: 0 }}>Capability Profile</h2>
           <form action={updateCapabilityProfileAction} style={{ display: 'grid', gap: 8 }}>
             <select name="providerId" defaultValue={logisticsProviders[0]?.id ?? ''} required>
@@ -1051,7 +1445,7 @@ export default async function AdminHomePage() {
           </form>
         </article>
 
-        <article style={{ padding: 16, background: '#0b1220', border: '1px solid #334155', borderRadius: 12 }}>
+        <article style={accentPanelStyle}>
           <h2 style={{ marginTop: 0 }}>Deal Logistics Selection</h2>
           <form action={selectLogisticsProviderAction} style={{ display: 'grid', gap: 8 }}>
             <select name="dealId" defaultValue={wholesaleDeals[0]?.id ?? ''} required>

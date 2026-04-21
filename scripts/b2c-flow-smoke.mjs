@@ -1,5 +1,10 @@
-const authBase = process.env.RUFLO_KEYCLOAK_URL ?? 'https://alemhub.sbs/auth';
-const apiBase = process.env.RUFLO_BASE_URL ?? 'https://alemhub.sbs/api';
+function normalizeBaseUrl(value, fallback) {
+  const raw = value ?? fallback;
+  return raw.replace(/\/+$/, '').replace(/\/api$/, '');
+}
+
+const authBase = normalizeBaseUrl(process.env.RUFLO_KEYCLOAK_URL, 'https://alemhub.sbs/auth');
+const apiBase = normalizeBaseUrl(process.env.RUFLO_BASE_URL, 'https://alemhub.sbs');
 
 async function jsonResponse(response) {
   const text = await response.text();
@@ -75,9 +80,15 @@ const supplierToken = await token('supplier@ruflo.local', 'change-me-supplier');
 
 const productsResponse = await fetch(`${apiBase}/api/catalog/public/products`, { cache: 'no-store' });
 const products = await productsResponse.json();
-const b2cProduct = products.find((product) => product.targetMarket === 'b2c');
+const b2cProduct = products.find(
+  (product) =>
+    product.targetMarket === 'b2c'
+    && product.status === 'published'
+    && product.availabilityStatus !== 'preorder'
+    && !product.isPreorderEnabled
+);
 
-ensure(b2cProduct?.id, 'No published B2C product was found in the catalog.');
+ensure(b2cProduct?.id, 'No published retail-purchasable B2C product was found in the catalog.');
 
 const cartAdd = await request('/api/retail/orders/cart/items', buyerToken, {
   method: 'POST',

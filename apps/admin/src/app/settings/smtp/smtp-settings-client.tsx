@@ -49,10 +49,13 @@ export function SmtpSettingsClient({ current }: { current: EmailSetting }) {
   const [testState, testAction, testPending] = useActionState(testEmailConfigurationAction, null as ActionState);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
       <article style={{ padding: 16, background: '#111827', borderRadius: 12 }}>
         <h2 style={{ marginTop: 0 }}>SMTP configuration</h2>
         <p>Status: {current.enabled && current.smtpHost ? 'configured' : 'not configured'}</p>
+        <p style={{ color: '#cbd5e1', lineHeight: 1.6 }}>
+          Password reset emails and notification delivery depend on this configuration. Leave SMTP disabled only if recovery email should stay unavailable.
+        </p>
         <form action={saveAction} style={{ display: 'grid', gap: 8 }}>
           <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" name="enabled" defaultChecked={Boolean(current.enabled)} /> Enabled
@@ -81,6 +84,9 @@ export function SmtpSettingsClient({ current }: { current: EmailSetting }) {
 
       <article style={{ padding: 16, background: '#111827', borderRadius: 12 }}>
         <h2 style={{ marginTop: 0 }}>Test SMTP</h2>
+        <p style={{ color: '#cbd5e1', lineHeight: 1.6 }}>
+          Use this after saving credentials to verify real delivery before enabling password reset for end users.
+        </p>
         <form action={testAction} style={{ display: 'grid', gap: 8 }}>
           <input name="recipientEmail" defaultValue="ops@ruflo.local" placeholder="Test recipient email" />
           <input name="subject" defaultValue="RuFlo SMTP test" placeholder="Subject" />

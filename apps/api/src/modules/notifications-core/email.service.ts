@@ -385,14 +385,22 @@ export class EmailService {
       where: { key: adminSettingKeys.email }
     });
     const config = (setting?.value as Prisma.JsonObject | null | undefined) ?? {};
+    const envEnabled = process.env.SMTP_ENABLED === 'true';
+    const envHost = process.env.SMTP_HOST ?? '';
+    const envPort = Number(process.env.SMTP_PORT ?? 587);
+    const envSecure = process.env.SMTP_SECURE === 'true';
+    const envUser = process.env.SMTP_USER ?? '';
+    const envPass = process.env.SMTP_PASS ?? '';
+    const configuredHost = getString(config.smtpHost, '');
+    const useStoredTransport = Boolean(configuredHost);
 
     return {
-      enabled: getBoolean(config.enabled, false) || process.env.SMTP_ENABLED === 'true',
-      host: getString(config.smtpHost, process.env.SMTP_HOST ?? ''),
-      port: getNumber(config.smtpPort, Number(process.env.SMTP_PORT ?? 587)),
-      secure: getBoolean(config.smtpSecure, process.env.SMTP_SECURE === 'true'),
-      user: getString(config.smtpUser, process.env.SMTP_USER ?? ''),
-      pass: getString(config.smtpPassword, process.env.SMTP_PASS ?? ''),
+      enabled: getBoolean(config.enabled, false) || envEnabled,
+      host: useStoredTransport ? configuredHost : envHost,
+      port: useStoredTransport ? getNumber(config.smtpPort, envPort) : envPort,
+      secure: useStoredTransport ? getBoolean(config.smtpSecure, envSecure) : envSecure,
+      user: useStoredTransport ? getString(config.smtpUser, envUser) : envUser,
+      pass: useStoredTransport ? getString(config.smtpPassword, envPass) : envPass,
       fromName: getString(config.fromName, 'RuFlo Marketplace'),
       fromEmail: getString(config.fromEmail, process.env.SMTP_FROM ?? 'noreply@ruflo.local'),
       replyToEmail: getString(config.replyToEmail, process.env.SMTP_REPLY_TO ?? 'support@ruflo.local'),

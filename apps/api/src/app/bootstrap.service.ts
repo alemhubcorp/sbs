@@ -34,6 +34,7 @@ const PLATFORM_PERMISSIONS = [
 const CUSTOMER_PERMISSIONS = ['catalog.read', 'retail.read', 'retail.manage', 'payment.read', 'payment.manage'];
 const SUPPLIER_PERMISSIONS = [
   'catalog.read',
+  'catalog.manage',
   'wholesale.read',
   'wholesale.manage',
   'contract.read',

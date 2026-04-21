@@ -536,6 +536,8 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
     setCardError(null);
 
     try {
+      const paymentProviderForMethod = method === 'card' || method === 'qr' ? 'airwallex' : 'internal_manual';
+
       if (method === 'card') {
         const cleanedCardNumber = card.cardNumber.replace(/\s+/g, '');
 
@@ -556,10 +558,29 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
         }
       }
 
+      const [rawExpiryMonth, rawExpiryYear] = card.expiry.split('/').map((value) => value.trim());
+      const normalizedExpiryMonth = rawExpiryMonth ? rawExpiryMonth.padStart(2, '0') : '';
+      const normalizedExpiryYear = rawExpiryYear
+        ? (rawExpiryYear.length === 2 ? `20${rawExpiryYear}` : rawExpiryYear)
+        : '';
+
       await retailJson<RetailOrder>(`orders/${orderId}/pay`, {
         method: 'POST',
         body: JSON.stringify({
-          note: `Payment submitted from UI via ${method}.`
+          method,
+          paymentProvider: paymentProviderForMethod,
+          note: `Payment submitted from UI via ${method}.`,
+          ...(method === 'card'
+            ? {
+                card: {
+                  cardholderName: card.cardholderName.trim(),
+                  cardNumber: card.cardNumber.replace(/\s+/g, ''),
+                  expiryMonth: normalizedExpiryMonth,
+                  expiryYear: normalizedExpiryYear,
+                  cvc: card.cvv.trim()
+                }
+              }
+            : {})
         })
       });
       setSuccess('Payment submitted. Awaiting confirmation.');
@@ -650,7 +671,7 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
             <section className={styles.card}>
               <div className={styles.sectionTitle}>Payment method</div>
               <div className={styles.buttonRow}>
-                {(['card', 'qr', 'bank_transfer', 'manual'] as const).map((entry) => (
+                {(['card', 'qr', 'bank_transfer', 'swift', 'manual'] as const).map((entry) => (
                   <button
                     type="button"
                     key={entry}
@@ -670,6 +691,8 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
                     ? 'QR payment will show a reference and scan-ready instructions.'
                   : method === 'bank_transfer'
                     ? 'Bank transfer will show transfer instructions and reference.'
+                    : method === 'swift'
+                      ? 'SWIFT payment will show beneficiary, IBAN, SWIFT/BIC, and transfer reference.'
                     : 'Manual payment stays in review until it is confirmed.'}
               </p>
               <div className={styles.metaRow}>

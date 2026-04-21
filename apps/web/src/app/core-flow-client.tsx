@@ -3,19 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AddToCartButton } from './retail-commerce-client';
+import type { CatalogProduct } from './catalog-data';
+import { availabilityLabel, currentProductAmount, formatMoney, isSaleActive } from './catalog-data';
 import styles from './core-flow.module.css';
 
-type Product = {
-  id: string;
-  slug: string;
-  name: string;
-  status: string;
-  targetMarket: string;
-  description?: string | null;
-  prices?: Array<{ amountMinor: number; currency: string }>;
-  category?: { name?: string | null };
-  sellerProfile?: { displayName?: string | null };
-};
+type Product = CatalogProduct;
 
 type ContractRfq = {
   id: string;
@@ -134,10 +126,7 @@ function priceLabel(product: Product) {
     return 'Request price';
   }
 
-  return `${price.currency} ${(price.amountMinor / 100).toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`;
+  return formatMoney(currentProductAmount(product), price.currency);
 }
 
 function productLabel(product?: Product | null) {
@@ -146,6 +135,18 @@ function productLabel(product?: Product | null) {
   }
 
   return `${product.name} (${product.slug})`;
+}
+
+function productImage(product: Product) {
+  return product.imageUrls?.[0] ?? null;
+}
+
+function productMarketLabel(targetMarket: Product['targetMarket']) {
+  return targetMarket === 'b2b' ? 'B2B' : targetMarket === 'b2c' ? 'B2C' : 'B2B / B2C';
+}
+
+function isBuyerFacingRole(viewerRole: MarketplaceRole) {
+  return viewerRole === 'buyer' || viewerRole === 'admin';
 }
 
 function dealPaymentMethodLabel(method?: ContractDealPaymentRecord['method'] | null) {
@@ -264,6 +265,43 @@ async function contractList<T>(path: string) {
   return contractJson<T>(path, { method: 'GET', headers: { 'content-type': 'application/json' } });
 }
 
+async function catalogJson<T>(path: string, init?: RequestInit) {
+  const hasBody = init?.body !== undefined && init?.body !== null;
+  const response = await fetch(`/api/catalog/${path}`, {
+    ...init,
+    headers: {
+      ...(hasBody ? { 'content-type': 'application/json' } : {}),
+      ...(init?.headers ?? {})
+    },
+    cache: 'no-store'
+  });
+
+  const text = await response.text();
+  let data: unknown = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      redirectToSignIn();
+      throw authRedirectError();
+    }
+
+    const message =
+      typeof data === 'object' && data !== null && 'message' in data && typeof (data as { message?: unknown }).message === 'string'
+        ? String((data as { message: string }).message)
+        : `Request failed with status ${response.status}`;
+
+    throw new Error(message);
+  }
+
+  return data as T;
+}
+
 export function RequestQuoteButton({ product, viewerRole }: RequestQuoteButtonProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
@@ -343,11 +381,188 @@ export function RequestQuoteButton({ product, viewerRole }: RequestQuoteButtonPr
   );
 }
 
+export function AuctionBidPanel({ product, viewerRole }: { product: Product; viewerRole: MarketplaceRole }) {
+  const auction = product.auction;
+  const [amountMinor, setAmountMinor] = useState(String((auction?.currentBidMinor ?? auction?.startingBidMinor ?? 0) + 1000));
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!auction) {
+    return null;
+  }
+
+  const activeAuction = auction;
+
+  if (viewerRole === 'guest') {
+    return (
+      <div className={styles.stack}>
+        <div className={styles.subtle}>Sign in to place bids on wholesale auction inventory.</div>
+        <Link href={`/signin?returnTo=/products/${product.slug}`} className={styles.button}>
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
+  if (!isBuyerFacingRole(viewerRole)) {
+    return <div className={styles.subtle}>Auction bidding is reserved for buyer accounts and platform admins.</div>;
+  }
+
+  async function submitBid() {
+    setLoading(true);
+    setSuccess(null);
+    setError(null);
+
+    try {
+      const bid = await catalogJson<{ amountMinor: number }>(`auctions/${activeAuction.id}/bids`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amountMinor: Number(amountMinor)
+        })
+      });
+
+      setSuccess(`Bid submitted at ${formatMoney(bid.amountMinor, activeAuction.currency)}.`);
+    } catch (requestError) {
+      if (isAuthRedirectError(requestError)) {
+        return;
+      }
+
+      setError(requestError instanceof Error ? requestError.message : 'Unable to place bid.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className={styles.stack}>
+      <div className={styles.inlineMeta}>
+        <span className={`${styles.status} ${styles.statusWarning}`}>Auction</span>
+        <span>Current: {formatMoney(activeAuction.currentBidMinor ?? activeAuction.startingBidMinor, activeAuction.currency)}</span>
+        <span>Ends: {new Date(activeAuction.endsAt).toLocaleString()}</span>
+      </div>
+      <div className={styles.fieldGrid}>
+        <div className={styles.field}>
+          <label htmlFor={`auction-bid-${activeAuction.id}`}>Bid amount</label>
+          <input
+            id={`auction-bid-${activeAuction.id}`}
+            type="number"
+            min={activeAuction.currentBidMinor ?? activeAuction.startingBidMinor}
+            step="100"
+            value={amountMinor}
+            onChange={(event) => setAmountMinor(event.target.value)}
+          />
+        </div>
+      </div>
+      <div className={styles.buttonRow}>
+        <button type="button" className={styles.button} onClick={() => void submitBid()} disabled={loading}>
+          {loading ? 'Submitting...' : 'Place Bid'}
+        </button>
+        <Link href="/auctions" className={styles.buttonSecondary}>
+          Open Auctions
+        </Link>
+      </div>
+      {success ? <div className={styles.successBox}>{success}</div> : null}
+      {error ? <div className={styles.errorBox}>{error}</div> : null}
+    </div>
+  );
+}
+
+export function PreorderReservationPanel({ product, viewerRole }: { product: Product; viewerRole: MarketplaceRole }) {
+  const [quantity, setQuantity] = useState(String(Math.max(1, product.minimumOrderQuantity ?? 1)));
+  const [note, setNote] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!product.isPreorderEnabled && product.availabilityStatus !== 'preorder') {
+    return null;
+  }
+
+  if (viewerRole === 'guest') {
+    return (
+      <div className={styles.stack}>
+        <div className={styles.subtle}>Sign in to reserve preorder supply before release.</div>
+        <Link href={`/signin?returnTo=/products/${product.slug}`} className={styles.button}>
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
+  if (!isBuyerFacingRole(viewerRole)) {
+    return <div className={styles.subtle}>Preorder reservations are reserved for buyer accounts and platform admins.</div>;
+  }
+
+  async function submitReservation() {
+    setLoading(true);
+    setSuccess(null);
+    setError(null);
+
+    try {
+      const reservation = await catalogJson<{ quantity: number; totalAmountMinor: number }>(`products/${product.id}/preorders`, {
+        method: 'POST',
+        body: JSON.stringify({
+          quantity: Number(quantity),
+          note
+        })
+      });
+
+      setSuccess(`Preorder reserved for ${reservation.quantity} units.`);
+    } catch (requestError) {
+      if (isAuthRedirectError(requestError)) {
+        return;
+      }
+
+      setError(requestError instanceof Error ? requestError.message : 'Unable to reserve preorder.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className={styles.stack}>
+      <div className={styles.inlineMeta}>
+        <span className={`${styles.status} ${styles.statusWarning}`}>Pre-order</span>
+        <span>Release: {product.preorderReleaseAt ? new Date(product.preorderReleaseAt).toLocaleDateString() : 'TBD'}</span>
+        <span>Deposit: {formatMoney(product.preorderDepositAmountMinor ?? 0, product.prices?.[0]?.currency ?? 'USD')}</span>
+      </div>
+      <div className={styles.fieldGrid}>
+        <div className={styles.field}>
+          <label htmlFor={`preorder-qty-${product.id}`}>Quantity</label>
+          <input
+            id={`preorder-qty-${product.id}`}
+            type="number"
+            min={product.minimumOrderQuantity ?? 1}
+            value={quantity}
+            onChange={(event) => setQuantity(event.target.value)}
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor={`preorder-note-${product.id}`}>Note</label>
+          <input id={`preorder-note-${product.id}`} value={note} onChange={(event) => setNote(event.target.value)} />
+        </div>
+      </div>
+      <div className={styles.buttonRow}>
+        <button type="button" className={styles.button} onClick={() => void submitReservation()} disabled={loading}>
+          {loading ? 'Reserving...' : 'Reserve Preorder'}
+        </button>
+        <Link href="/preorders" className={styles.buttonSecondary}>
+          Open Preorders
+        </Link>
+      </div>
+      {success ? <div className={styles.successBox}>{success}</div> : null}
+      {error ? <div className={styles.errorBox}>{error}</div> : null}
+    </div>
+  );
+}
+
 export function ProductCatalogClient({ products, viewerRole }: { products: Product[]; viewerRole: MarketplaceRole }) {
   return (
     <div className={styles.catalogGrid}>
       {products.map((product) => (
         <article className={styles.catalogCard} key={product.id}>
+          {productImage(product) ? <img src={productImage(product)!} alt={product.name} className={styles.catalogImage} /> : null}
           <div className={styles.catalogCardInner}>
             <div className={styles.catalogTop}>
               <span
@@ -355,15 +570,32 @@ export function ProductCatalogClient({ products, viewerRole }: { products: Produ
                   product.targetMarket === 'b2b' ? styles.pillBlue : product.targetMarket === 'b2c' ? styles.pillAmber : styles.pillTeal
                 }`}
               >
-                {product.targetMarket === 'b2b' ? 'B2B' : product.targetMarket === 'b2c' ? 'B2C' : 'Both'}
+                {productMarketLabel(product.targetMarket)}
               </span>
-              <span className={styles.muted}>{product.status}</span>
+              <span className={`${styles.status} ${product.availabilityStatus === 'in_stock' ? styles.statusSuccess : styles.statusWarning}`}>
+                {availabilityLabel(product.availabilityStatus)}
+              </span>
             </div>
             <div className={styles.catalogName}>{product.name}</div>
             <div className={styles.catalogMeta}>
               <div>{product.category?.name ?? 'Uncategorized'}</div>
               <div>{product.sellerProfile?.displayName ?? 'Unknown seller'}</div>
               <div>{priceLabel(product)}</div>
+              <div>
+                MOQ {product.minimumOrderQuantity ?? 1}
+                {product.inventoryQuantity !== null && product.inventoryQuantity !== undefined ? ` · ${product.inventoryQuantity} units` : ''}
+              </div>
+              {product.leadTimeDays ? <div>Lead time {product.leadTimeDays} days</div> : null}
+              {isSaleActive(product) && product.compareAtAmountMinor ? (
+                <div>
+                  Sale from {formatMoney(product.compareAtAmountMinor, product.prices?.[0]?.currency ?? 'USD')} to{' '}
+                  {formatMoney(currentProductAmount(product), product.prices?.[0]?.currency ?? 'USD')}
+                </div>
+              ) : null}
+              {product.auction ? <div>Auction live · ends {new Date(product.auction.endsAt).toLocaleDateString()}</div> : null}
+              {product.isPreorderEnabled || product.availabilityStatus === 'preorder' ? (
+                <div>Pre-order release {product.preorderReleaseAt ? new Date(product.preorderReleaseAt).toLocaleDateString() : 'TBD'}</div>
+              ) : null}
             </div>
             <div className={styles.catalogFoot}>
               <Link href={`/products/${product.slug}`} className={styles.catalogAction}>
@@ -385,7 +617,9 @@ export function ProductCatalogClient({ products, viewerRole }: { products: Produ
                 )
               ) : null}
             </div>
-            {product.targetMarket !== 'b2b' ? <AddToCartButton product={product} viewerRole={viewerRole} /> : null}
+            {product.targetMarket !== 'b2b' && !product.isPreorderEnabled && product.availabilityStatus !== 'preorder' ? (
+              <AddToCartButton product={product} viewerRole={viewerRole} />
+            ) : null}
           </div>
         </article>
       ))}
@@ -745,6 +979,15 @@ export function DealsBoard({
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [paymentMethodDrafts, setPaymentMethodDrafts] = useState<Record<string, { method: ContractDealPaymentRecord['method'] }>>({});
+  const [publicSettings, setPublicSettings] = useState<null | {
+    governance?: {
+      consent?: {
+        dealFundingDocumentSlugs?: string[];
+      };
+    };
+    legalDocuments?: Array<{ slug: string; title: string; version: string; href: string }>;
+  }>(null);
+  const [dealConsents, setDealConsents] = useState<Record<string, Record<string, boolean>>>({});
 
   async function loadBoard() {
     setQuotesState((current) => ({ ...current, loading: true, error: null }));
@@ -773,6 +1016,38 @@ export function DealsBoard({
     void loadBoard();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void fetch('/api/platform/public-settings', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) {
+          return null;
+        }
+
+        return (await response.json()) as {
+          governance?: {
+            consent?: {
+              dealFundingDocumentSlugs?: string[];
+            };
+          };
+          legalDocuments?: Array<{ slug: string; title: string; version: string; href: string }>;
+        };
+      })
+      .then((data) => {
+        if (!cancelled && data) {
+          setPublicSettings(data);
+        }
+      })
+      .catch(() => {
+        // Backend will still validate consent.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   async function acceptQuote(quoteId: string) {
     setActionError(null);
     setActionSuccess(null);
@@ -796,9 +1071,35 @@ export function DealsBoard({
     setActionError(null);
     setActionSuccess(null);
 
+    const requiredDocuments =
+      action === 'fund'
+        ? (publicSettings?.legalDocuments ?? []).filter((document) =>
+            (publicSettings?.governance?.consent?.dealFundingDocumentSlugs ?? []).includes(document.slug)
+          )
+        : [];
+
+    if (action === 'fund') {
+      for (const document of requiredDocuments) {
+        if (!dealConsents[dealId]?.[document.slug]) {
+          setActionError(`Consent is required for ${document.title}.`);
+          return;
+        }
+      }
+    }
+
     try {
       await contractJson(`deals/${dealId}/${action}`, {
-        method: 'POST'
+        method: 'POST',
+        ...(action === 'fund'
+          ? {
+              body: JSON.stringify({
+                consents: requiredDocuments.map((document) => ({
+                  documentSlug: document.slug,
+                  version: document.version
+                }))
+              })
+            }
+          : {})
       });
       setActionSuccess(
         action === 'fund'
@@ -932,9 +1233,37 @@ export function DealsBoard({
                   : 'Amount unavailable';
             const actionButton =
               deal.dealStatus === 'accepted' && canFund ? (
-                <button type="button" className={styles.buttonSecondary} onClick={() => void progressDeal(deal.id, 'fund')}>
-                  Submit Funding Request
-                </button>
+                <div className={styles.stack}>
+                  {(publicSettings?.legalDocuments ?? [])
+                    .filter((document) => (publicSettings?.governance?.consent?.dealFundingDocumentSlugs ?? []).includes(document.slug))
+                    .map((document) => (
+                      <label key={`${deal.id}-${document.slug}`} className={styles.subtle} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <input
+                          type="checkbox"
+                          checked={dealConsents[deal.id]?.[document.slug] ?? false}
+                          onChange={(event) =>
+                            setDealConsents((current) => ({
+                              ...current,
+                              [deal.id]: {
+                                ...(current[deal.id] ?? {}),
+                                [document.slug]: event.target.checked
+                              }
+                            }))
+                          }
+                        />
+                        <span>
+                          I agree to the{' '}
+                          <Link href={document.href} target="_blank">
+                            {document.title}
+                          </Link>
+                          .
+                        </span>
+                      </label>
+                    ))}
+                  <button type="button" className={styles.buttonSecondary} onClick={() => void progressDeal(deal.id, 'fund')}>
+                    Submit Funding Request
+                  </button>
+                </div>
               ) : deal.dealStatus === 'in_escrow' && canShip ? (
                 <button type="button" className={styles.buttonSecondary} onClick={() => void progressDeal(deal.id, 'ship')}>
                   Mark Shipped

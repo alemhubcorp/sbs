@@ -22,6 +22,7 @@ export interface AuthSession {
     sub: string | null;
     email: string | null;
     username: string | null;
+    emailVerified: boolean;
   };
 }
 
@@ -101,7 +102,8 @@ function mapTokens(tokenResponse: {
     profile: {
       sub: typeof payload.sub === 'string' ? payload.sub : null,
       email: typeof payload.email === 'string' ? payload.email : null,
-      username: typeof payload.preferred_username === 'string' ? payload.preferred_username : null
+      username: typeof payload.preferred_username === 'string' ? payload.preferred_username : null,
+      emailVerified: payload.email_verified === true
     }
   };
 }
@@ -153,6 +155,40 @@ export async function exchangeAuthorizationCode(code: string, requestHost?: stri
 
   if (!response.ok) {
     throw new Error(`Authorization code exchange failed with status ${response.status}`);
+  }
+
+  return mapTokens(
+    (await response.json()) as {
+      access_token: string;
+      refresh_token: string;
+      id_token?: string;
+      expires_in: number;
+    }
+  );
+}
+
+export async function exchangePasswordCredentials(email: string, password: string, requestHost?: string | null) {
+  const { keycloakInternalUrl, realm, clientId, clientSecret } = getConfig(requestHost);
+  const response = await fetch(`${keycloakInternalUrl}/realms/${realm}/protocol/openid-connect/token`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded'
+    },
+    body: new URLSearchParams({
+      grant_type: 'password',
+      username: email,
+      password,
+      client_id: clientId,
+      client_secret: clientSecret
+    })
+  });
+
+  if (!response.ok) {
+    if (response.status === 400 || response.status === 401) {
+      throw new Error('Invalid email or password.');
+    }
+
+    throw new Error(`Password sign-in failed with status ${response.status}`);
   }
 
   return mapTokens(
@@ -251,7 +287,8 @@ export async function getOptionalSession(): Promise<AuthSession | null> {
     profile: {
       sub: typeof payload.sub === 'string' ? payload.sub : null,
       email: typeof payload.email === 'string' ? payload.email : null,
-      username: typeof payload.preferred_username === 'string' ? payload.preferred_username : null
+      username: typeof payload.preferred_username === 'string' ? payload.preferred_username : null,
+      emailVerified: payload.email_verified === true
     }
   };
 }
@@ -260,13 +297,13 @@ export async function requireAccessToken(returnTo = '/') {
   const session = await getOptionalSession();
 
   if (!session) {
-    redirect(`/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+    redirect(`/signin?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   const activeSession = session;
 
   if (activeSession.expiresAt <= Date.now() + refreshThresholdMs) {
-    redirect(`/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`);
+    redirect(`/session/refresh?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   return activeSession.accessToken;

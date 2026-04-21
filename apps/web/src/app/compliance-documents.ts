@@ -164,6 +164,61 @@ export async function signedS3Request(
   }
 }
 
+export async function signedS3Fetch(
+  config: S3Config,
+  method: 'PUT' | 'GET' | 'HEAD',
+  path: string,
+  body: Buffer | null,
+  contentType: string,
+  payloadHashOverride?: string
+) {
+  const host = `${config.endpoint}:${config.port}`;
+  const amzDate = toAmzDate(new Date());
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = payloadHashOverride ?? sha256Hex(body ?? Buffer.from(''));
+  const canonicalUri = `/${path}`;
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+  const canonicalRequest = [
+    method,
+    canonicalUri,
+    '',
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash
+  ].join('\n');
+  const algorithm = 'AWS4-HMAC-SHA256';
+  const credentialScope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const stringToSign = [
+    algorithm,
+    amzDate,
+    credentialScope,
+    sha256Hex(canonicalRequest)
+  ].join('\n');
+  const signingKey = getSignatureKey(config.rootPassword, dateStamp, config.region, 's3');
+  const signature = createHmac('sha256', signingKey).update(stringToSign).digest('hex');
+  const authorization = `${algorithm} Credential=${config.rootUser}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const response = await fetch(`http://${host}/${path}`, {
+    method,
+    headers: {
+      authorization,
+      host,
+      'x-amz-content-sha256': payloadHash,
+      'x-amz-date': amzDate,
+      ...(method !== 'HEAD' ? { 'content-type': contentType } : {})
+    },
+    body: method === 'GET' || method === 'HEAD' ? null : body ? new Uint8Array(body) : null,
+    cache: 'no-store'
+  });
+
+  if (!response.ok && response.status !== 409) {
+    throw new Error(`MinIO request failed with status ${response.status}`);
+  }
+
+  return response;
+}
+
 export function encodeS3Path(path: string) {
   return path
     .split('/')

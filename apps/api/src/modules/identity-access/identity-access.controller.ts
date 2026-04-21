@@ -35,16 +35,40 @@ export class IdentityAccessController {
     return this.identityAccessService.createUser(body, extractRequestAuditContext(request));
   }
 
+  @Post('accounts')
+  @RequirePermissions('identity.manage')
+  createAccount(@Body() body: unknown, @Req() request: ApiRequestLike) {
+    return this.identityAccessService.createAccount(body, extractRequestAuditContext(request));
+  }
+
   @Post('public/register/:kind')
   @Public()
   registerPublicAccount(@Param('kind') kind: string, @Body() body: unknown, @Req() request: ApiRequestLike) {
     return this.identityAccessService.registerPublicAccount(kind, body, extractRequestAuditContext(request));
   }
 
+  @Post('public/password/forgot')
+  @Public()
+  requestPasswordReset(@Body() body: unknown, @Req() request: ApiRequestLike) {
+    return this.identityAccessService.requestPasswordReset(body, extractRequestAuditContext(request));
+  }
+
+  @Post('public/password/reset')
+  @Public()
+  resetPassword(@Body() body: unknown, @Req() request: ApiRequestLike) {
+    return this.identityAccessService.resetPassword(body, extractRequestAuditContext(request));
+  }
+
   @Put('users/:id/roles')
   @RequirePermissions('identity.manage')
   assignRoles(@Param('id') id: string, @Body() body: unknown, @Req() request: ApiRequestLike) {
     return this.identityAccessService.assignRoles(id, body, extractRequestAuditContext(request));
+  }
+
+  @Put('users/:id/status')
+  @RequirePermissions('identity.manage')
+  updateUserStatus(@Param('id') id: string, @Body() body: unknown, @Req() request: ApiRequestLike) {
+    return this.identityAccessService.updateUserStatus(id, body, extractRequestAuditContext(request));
   }
 
   @Get('roles')

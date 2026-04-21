@@ -92,3 +92,18 @@ export class PaymentWebhookController {
     return this.paymentOpsService.ingestWebhook(provider, body, headers, extractRequestAuditContext(request));
   }
 }
+
+@Controller('platform/webhooks')
+export class PlatformWebhookCompatibilityController {
+  constructor(@Inject(PaymentOpsService) private readonly paymentOpsService: PaymentOpsService) {}
+
+  @Post(':provider')
+  ingestWebhook(
+    @Param('provider') provider: string,
+    @Body() body: unknown,
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Req() request: ApiRequestLike
+  ) {
+    return this.paymentOpsService.ingestWebhook(provider, body, headers, extractRequestAuditContext(request));
+  }
+}

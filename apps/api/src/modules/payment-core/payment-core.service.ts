@@ -50,6 +50,7 @@ type PaymentSelectionInput = {
   provider?: PaymentProviderCode | undefined;
   note?: string | undefined;
   simulateFailure?: boolean | undefined;
+  metadata?: Prisma.InputJsonValue | undefined;
 };
 
 type ProviderConnection = {
@@ -207,10 +208,18 @@ export class PaymentCoreService {
     const paymentRecord = await this.ensureOrderPaymentRecord(order);
     const provider = paymentRecord.provider as PaymentProviderCode;
     const status = input.simulateFailure ? 'failed' : this.resolveSubmissionStatus(paymentRecord.method, provider);
+    const mergedMetadata =
+      input.note || input.metadata
+        ? ({
+            ...(this.asObject(paymentRecord.metadata) ?? {}),
+            ...(input.note ? { note: input.note } : {}),
+            ...(this.asObject(input.metadata) ?? {})
+          } as Prisma.InputJsonValue)
+        : undefined;
 
     const updated = await this.paymentCoreRepository.updatePaymentRecord(paymentRecord.id, {
       status,
-      ...(input.note ? { metadata: { note: input.note } as Prisma.InputJsonValue } : {})
+      ...(mergedMetadata !== undefined ? { metadata: mergedMetadata } : {})
     });
 
     await this.paymentCoreRepository.createAttempt({
@@ -356,10 +365,18 @@ export class PaymentCoreService {
 
     const provider = paymentRecord.provider as PaymentProviderCode;
     const status = input.simulateFailure ? 'failed' : this.resolveSubmissionStatus(paymentRecord.method, provider);
+    const mergedMetadata =
+      input.note || input.metadata
+        ? ({
+            ...(this.asObject(paymentRecord.metadata) ?? {}),
+            ...(input.note ? { note: input.note } : {}),
+            ...(this.asObject(input.metadata) ?? {})
+          } as Prisma.InputJsonValue)
+        : undefined;
 
     const updated = await this.paymentCoreRepository.updatePaymentRecord(paymentRecord.id, {
       status,
-      ...(input.note ? { metadata: { note: input.note } as Prisma.InputJsonValue } : {})
+      ...(mergedMetadata !== undefined ? { metadata: mergedMetadata } : {})
     });
 
     await this.paymentCoreRepository.createAttempt({
@@ -564,6 +581,14 @@ export class PaymentCoreService {
     }
 
     return 'awaiting_transfer';
+  }
+
+  private asObject(value: Prisma.JsonValue | Prisma.InputJsonValue | null | undefined) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
   }
 
   private async ensureOrderPaymentRecord(order: OrderSubject) {

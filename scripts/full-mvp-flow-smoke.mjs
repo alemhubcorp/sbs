@@ -1,5 +1,10 @@
-const api = process.env.RUFLO_BASE_URL ?? 'http://api:3000';
-const keycloak = process.env.RUFLO_KEYCLOAK_URL ?? 'http://keycloak:8080';
+function normalizeBaseUrl(value, fallback) {
+  const raw = value ?? fallback;
+  return raw.replace(/\/+$/, '').replace(/\/api$/, '');
+}
+
+const api = normalizeBaseUrl(process.env.RUFLO_BASE_URL, 'http://api:3000');
+const keycloak = normalizeBaseUrl(process.env.RUFLO_KEYCLOAK_URL, 'http://keycloak:8080');
 
 async function request(url, options = {}) {
   const response = await fetch(url, options);
