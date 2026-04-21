@@ -187,7 +187,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
       <nav className={styles.nav}>
         <Link href="/" className={styles.logo}>
           <div className={styles.logoBox}>SC</div>
-          Safe-Contract
+          Alemhub
         </Link>
         <div className={styles.navLinks}>
           {navLinks.map((link) => (
@@ -268,7 +268,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
           <div>
             <Link href="/" className={styles.logo}>
               <div className={styles.logoBox}>SC</div>
-              Safe-Contract
+              Alemhub
             </Link>
             <p className={styles.footerAbout}>
               Your trusted B2B2C international marketplace connecting suppliers, businesses, and consumers worldwide.
@@ -307,7 +307,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
           ))}
         </div>
         <div className={styles.footerBottom}>
-          <span>© 2026 {publicSettings?.company.legalName || 'Safe-Contract'}. All rights reserved.</span>
+          <span>© 2026 {publicSettings?.company.legalName || 'Alemhub'}. All rights reserved.</span>
           <div className={styles.footerLegal}>
             {footerLegalLinks.map((item) => (
               <Link href={item.href} key={item.slug}>

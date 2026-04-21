@@ -5,7 +5,7 @@ export default function HelpCenterPage() {
     <RouteShell
       eyebrow="Support"
       title="Help center, shipping info, returns, and contact are all real routes now."
-      description="Footer support links no longer collapse into '#'. They open real pages in the same safe-contract visual language."
+      description="Footer support links no longer collapse into '#'. They open real pages in the same Alemhub visual language."
       primary={{ label: 'Contact Us', href: '/contact' }}
       secondary={{ label: 'About Us', href: '/about' }}
       cards={[

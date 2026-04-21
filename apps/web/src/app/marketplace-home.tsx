@@ -65,7 +65,7 @@ const whyChecks = [
 
 const testimonials = [
   { initials: 'AK', name: 'Aibek Khasanov',    role: 'Director, Agro Trade KZ', accent: 'linear-gradient(135deg,#0b1a33,#0d7a5f)', text: 'We exported 500 tons of wheat to the UAE. The escrow system gave our buyer full confidence, and payment arrived within 24 hours of delivery confirmation.' },
-  { initials: 'MR', name: 'Mohammed Al-Rashid', role: 'Procurement Manager, Dubai', accent: 'linear-gradient(135deg,#0d7a5f,#0ea87f)', text: "Importing equipment from China was always risky with wire transfers. Safe-Contract's escrow removed all the risk — I only released funds after inspecting the shipment." },
+  { initials: 'MR', name: 'Mohammed Al-Rashid', role: 'Procurement Manager, Dubai', accent: 'linear-gradient(135deg,#0d7a5f,#0ea87f)', text: "Importing equipment from China was always risky with wire transfers. Alemhub's escrow removed all the risk — I only released funds after inspecting the shipment." },
   { initials: 'SP', name: 'Sergei Petrov',      role: 'CEO, TM Power',            accent: 'linear-gradient(135deg,#1a4fd8,#3b82f6)', text: 'The auction feature helped us sell steel billets at 12% above asking price. Seven bidders competed in real time — results impossible through traditional channels.' },
 ];
 
@@ -158,7 +158,7 @@ export function MarketplaceHome({ healthStatus, products, publicSettings }: {
       <nav className={styles.nav}>
         <Link href="/" className={styles.logo}>
           <div className={styles.logoMark}>SC</div>
-          Safe-Contract
+          Alemhub
         </Link>
         <div className={styles.navLinks}>
           <Link href="/products">Products</Link>
@@ -354,7 +354,7 @@ export function MarketplaceHome({ healthStatus, products, publicSettings }: {
       <section className={styles.whySection} id="why">
         <div className={styles.whyInner}>
           <div>
-            <div className={styles.sectionEyebrow}>Why Safe-Contract</div>
+            <div className={styles.sectionEyebrow}>Why Alemhub</div>
             <div className={styles.sectionTitle}>Built on trust<br />at every step</div>
             <div className={styles.whyChecks}>
               {whyChecks.map(item => (
@@ -436,7 +436,7 @@ export function MarketplaceHome({ healthStatus, products, publicSettings }: {
           <div className={styles.footerBrand}>
             <Link href="/" className={styles.logo}>
               <div className={styles.logoMark}>SC</div>
-              Safe-Contract
+              Alemhub
             </Link>
             <p className={styles.footerAbout}>Your trusted B2B2C international marketplace connecting suppliers, businesses, and consumers worldwide.</p>
             <div className={styles.footerContacts}>
@@ -457,7 +457,7 @@ export function MarketplaceHome({ healthStatus, products, publicSettings }: {
           ))}
         </div>
         <div className={styles.footerBottom}>
-          <span className={styles.footerCopy}>© 2026 {publicSettings?.company.legalName || 'Safe-Contract'}. All rights reserved.</span>
+          <span className={styles.footerCopy}>© 2026 {publicSettings?.company.legalName || 'Alemhub'}. All rights reserved.</span>
           <div className={styles.footerLegal}>
             {(publicSettings?.legalDocuments.filter(d => d.showInFooter) ?? []).map(d => (
               <a key={d.slug} href={d.href}>{d.footerLabel}</a>

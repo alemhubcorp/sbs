@@ -1,7 +1,7 @@
 ﻿import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'Safe-Contract - Global B2B2C Trade Platform',
+  title: 'Alemhub - Global B2B2C Trade Platform',
   description: 'Global B2B2C trade platform with escrow-protected transactions.'
 };
 

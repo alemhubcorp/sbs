@@ -4,7 +4,7 @@ export default function AboutPage() {
   return (
     <RouteShell
       eyebrow="About"
-      title="About Safe-Contract and the marketplace footprint."
+      title="About Alemhub and the marketplace footprint."
       description="The about route keeps the informational footer link alive and consistent with the current site style."
       primary={{ label: 'Open Products', href: '/products' }}
       secondary={{ label: 'Open Pricing', href: '/pricing' }}
