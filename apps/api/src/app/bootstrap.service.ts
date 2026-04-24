@@ -1245,6 +1245,8 @@ export class BootstrapService implements OnApplicationBootstrap {
       standardFlowEnabled: true,
       directAccessGrantsEnabled: true,
       serviceAccountsEnabled: false,
+      rootUrl: this.buildClientRootUrl(appUrl),
+      baseUrl: this.buildClientBaseUrl(appUrl),
       redirectUris,
       webOrigins
     };
@@ -1274,13 +1276,25 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   private buildAllowedRedirectUris(appUrl: string) {
-    const urls = new Set<string>([`${appUrl}/auth/callback`, `${appUrl}/*`]);
+    const urls = new Set<string>([appUrl, `${appUrl}/auth/callback`, `${appUrl}/*`]);
+    const rootUrl = this.buildClientRootUrl(appUrl);
+    const baseUrl = this.buildClientBaseUrl(appUrl);
 
     if (this.isLocalRuntimeUrl(appUrl)) {
       const localhostVariants = this.buildLocalhostUrlVariants(appUrl);
       for (const variant of localhostVariants) {
+        urls.add(variant);
         urls.add(`${variant}/auth/callback`);
         urls.add(`${variant}/*`);
+      }
+
+      if (baseUrl !== '/') {
+        for (const originVariant of this.buildLocalhostUrlVariants(rootUrl)) {
+          const scopedVariant = `${originVariant}${baseUrl}`;
+          urls.add(scopedVariant);
+          urls.add(`${scopedVariant}/auth/callback`);
+          urls.add(`${scopedVariant}/*`);
+        }
       }
     }
 
@@ -1288,10 +1302,10 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   private buildAllowedWebOrigins(appUrl: string) {
-    const origins = new Set<string>([new URL(appUrl).origin]);
+    const origins = new Set<string>([this.buildClientRootUrl(appUrl)]);
 
     if (this.isLocalRuntimeUrl(appUrl)) {
-      for (const variant of this.buildLocalhostUrlVariants(appUrl)) {
+      for (const variant of this.buildLocalhostUrlVariants(this.buildClientRootUrl(appUrl))) {
         origins.add(new URL(variant).origin);
       }
     }
@@ -1315,7 +1329,17 @@ export class BootstrapService implements OnApplicationBootstrap {
   }
 
   private isLocalRuntimeUrl(appUrl: string) {
-    return /^(http:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(appUrl);
+    const parsedUrl = new URL(appUrl);
+    return /^(localhost|127\.0\.0\.1|::1)$/i.test(parsedUrl.hostname);
+  }
+
+  private buildClientRootUrl(appUrl: string) {
+    return new URL(appUrl).origin;
+  }
+
+  private buildClientBaseUrl(appUrl: string) {
+    const path = new URL(appUrl).pathname.replace(/\/$/, '');
+    return path || '/';
   }
 
   private async ensureMembership(tenantId: string, userId: string, membershipType: 'owner' | 'member') {

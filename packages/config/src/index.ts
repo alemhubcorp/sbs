@@ -76,8 +76,8 @@ export function loadRuntimeConfig() {
       webUrl: parsed.WEB_URL,
       apiUrl: parsed.API_URL,
       adminUrl: parsed.ADMIN_URL,
-      adminAppUrl: parsed.ADMIN_URL || parsed.ADMIN_APP_URL,
-      webAppUrl: parsed.WEB_URL || parsed.WEB_APP_URL
+      adminAppUrl: parsed.ADMIN_APP_URL || parsed.ADMIN_URL,
+      webAppUrl: parsed.WEB_APP_URL || parsed.WEB_URL
     },
     observability: {
       otlpEndpoint: parsed.OTEL_EXPORTER_OTLP_ENDPOINT

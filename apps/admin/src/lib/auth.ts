@@ -257,8 +257,8 @@ export async function getOptionalSession(): Promise<AuthSession | null> {
 
 export async function requireAccessToken(returnTo = '/') {
   const session = await getOptionalSession();
-  const loginUrl = `${buildAdminAppUrl()}/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
-  const refreshUrl = `${buildAdminAppUrl()}/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`;
+  const loginUrl = `/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+  const refreshUrl = `/auth/refresh?returnTo=${encodeURIComponent(returnTo)}`;
 
   if (!session) {
     redirect(loginUrl);
