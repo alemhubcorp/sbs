@@ -1,0 +1,87 @@
+x-node-build: &node-build
+  context: .
+  dockerfile: infra/docker/node-prod/Dockerfile
+
+services:
+  web:
+    build: *node-build
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:3001}
+      WEB_URL: ${WEB_URL:-http://localhost:3001}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3001}
+      ADMIN_APP_URL: ${ADMIN_APP_URL:-http://localhost:3002}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:3002/admin}
+      API_URL: ${API_URL:-http://localhost:3000/api}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3000/api}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
+      NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL: ${NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL:-http://localhost:3001}
+      NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3002/admin}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8080/auth/realms/ruflo}
+
+  admin:
+    build: *node-build
+    environment:
+      APP_URL: ${ADMIN_URL:-http://localhost:3002/admin}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:3002/admin}
+      ADMIN_APP_URL: ${ADMIN_APP_URL:-http://localhost:3002}
+      WEB_URL: ${WEB_URL:-http://localhost:3001}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3001}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3000/api}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
+      NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL: ${NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3002/admin}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3002/admin}
+      NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL:-http://localhost:3001}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8080/auth/realms/ruflo}
+
+  api:
+    build: *node-build
+    environment:
+      APP_URL: ${APP_URL:-http://localhost:3001}
+      WEB_URL: ${WEB_URL:-http://localhost:3001}
+      WEB_APP_URL: ${WEB_APP_URL:-http://localhost:3001}
+      ADMIN_URL: ${ADMIN_URL:-http://localhost:3002/admin}
+      ADMIN_APP_URL: ${ADMIN_APP_URL:-http://localhost:3002}
+      API_URL: ${API_URL:-http://localhost:3000/api}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3000/api}
+      NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL:-http://localhost:3001}
+      NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL:-http://localhost:3002/admin}
+      NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL: ${NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
+      KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
+      KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8080/auth/realms/ruflo}
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      SMTP_FROM: ${SMTP_FROM:-noreply@localhost}
+      SMTP_REPLY_TO: ${SMTP_REPLY_TO:-support@localhost}
+      SMTP_SUPPORT_EMAIL: ${SMTP_SUPPORT_EMAIL:-support@localhost}
+
+  worker:
+    build: *node-build
+
+  ai-worker:
+    build: *node-build
+
+  keycloak:
+    command:
+      - start
+      - --optimized
+      - --http-port=8080
+      - --hostname=${KEYCLOAK_HOSTNAME:-localhost}
+      - --hostname-strict=false
+      - --hostname-strict-https=false
+      - --proxy-headers=xforwarded
+    environment:
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          /bin/bash -lc 'exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf "GET /auth/health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 &&
+          grep -q "200" <&3'
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s

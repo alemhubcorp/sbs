@@ -15,7 +15,7 @@ COPY packages ./packages
 COPY scripts ./scripts
 COPY tsconfig.base.json ./
 
-RUN npm ci
+RUN npm ci --foreground-scripts --no-audit --no-fund
 RUN npm run prisma:generate
 RUN npm run build
 

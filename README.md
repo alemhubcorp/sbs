@@ -40,6 +40,15 @@ Production-grade MVP scaffold for a self-hosted B2B2C marketplace-fintech platfo
 - Start AI worker: `npm run start -w @ruflo/ai-worker`
 - Start infrastructure with Docker Compose: `docker compose up -d`
 
+## Local Docker Runtime
+- Local override file: `docker-compose.local.yml`
+- Local env template: `.env.local.example`
+- Build local runtime images: `npm run local:build`
+- Start full local stack: `npm run local:up`
+- Check local health and redirects: `npm run local:check`
+- Rebuild only local admin runtime cleanly: `npm run local:rebuild:admin`
+- Stop local stack: `npm run local:down`
+
 ## Boundary Rules
 - Retail and wholesale transaction logic stay separate.
 - Payments, audit, and outbox/inbox are SQL-first.
