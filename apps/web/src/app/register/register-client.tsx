@@ -70,7 +70,8 @@ export function RegistrationForm({ kind, returnTo }: Props) {
     };
     legalDocuments?: Array<{ slug: string; title: string; version: string; href: string }>;
   }>(null);
-  const [acceptedConsents, setAcceptedConsents] = useState<Record<string, boolean>>({});
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,12 +95,17 @@ export function RegistrationForm({ kind, returnTo }: Props) {
         };
       })
       .then((data) => {
-        if (!cancelled && data) {
-          setPublicSettings(data);
+        if (!cancelled) {
+          if (data) {
+            setPublicSettings(data);
+          }
+          setSettingsLoaded(true);
         }
       })
       .catch(() => {
-        // Leave settings empty and let the backend enforce consent.
+        if (!cancelled) {
+          setSettingsLoaded(true);
+        }
       });
 
     return () => {
@@ -126,11 +132,14 @@ export function RegistrationForm({ kind, returnTo }: Props) {
       return;
     }
 
-    for (const document of requiredConsentDocs) {
-      if (!acceptedConsents[document.slug]) {
-        setError(`Consent is required for ${document.title}.`);
-        return;
-      }
+    if (!legalAccepted) {
+      setError('You must accept the Terms & Conditions and Privacy Policy to continue.');
+      return;
+    }
+
+    if (!settingsLoaded) {
+      setError('Registration requirements are still loading. Please try again in a moment.');
+      return;
     }
 
     setSubmitting(true);
@@ -290,46 +299,40 @@ export function RegistrationForm({ kind, returnTo }: Props) {
         {error ? <div className={styles.error}>{error}</div> : null}
         {publicSettings?.governance?.emailVerificationRequired ? (
           <div className={styles.notice}>
-            Email verification is enabled for new accounts. You will need to verify your email before signing in.
+            A verification email will be sent after registration. Check your inbox before signing in.
           </div>
         ) : null}
         {publicSettings?.governance?.emailVerificationBlockedReason ? (
           <div className={styles.error}>{publicSettings.governance.emailVerificationBlockedReason}</div>
         ) : null}
-        {requiredConsentDocs.length ? (
-          <div className={styles.consentCard}>
-            <div className={styles.consentTitle}>Required consents</div>
-            <div className={styles.consentList}>
-              {requiredConsentDocs.map((document) => (
-                <label className={styles.consentItem} key={document.slug}>
-                  <input
-                    type="checkbox"
-                    checked={acceptedConsents[document.slug] ?? false}
-                    onChange={(event) =>
-                      setAcceptedConsents((current) => ({
-                        ...current,
-                        [document.slug]: event.target.checked
-                      }))
-                    }
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <Link href={document.href} target="_blank">
-                      {document.title}
-                    </Link>
-                    .
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ) : null}
+
+        <div className={styles.consentCard}>
+          <label className={styles.consentItem}>
+            <input
+              type="checkbox"
+              checked={legalAccepted}
+              onChange={(event) => setLegalAccepted(event.target.checked)}
+            />
+            <span>
+              I agree to the{' '}
+              <Link href="/terms" target="_blank">Terms &amp; Conditions</Link>
+              {' and '}
+              <Link href="/privacy" target="_blank">Privacy Policy</Link>
+              {kind === 'supplier' ? (
+                <>
+                  {' and '}
+                  <Link href="/seller-policy" target="_blank">Seller Policy</Link>
+                </>
+              ) : null}
+            </span>
+          </label>
+        </div>
 
         <div className={styles.actions}>
-          <button type="submit" className={styles.submit} disabled={submitting}>
-            {submitting ? 'Creating account...' : kind === 'buyer' ? 'Create buyer account' : 'Create supplier account'}
+          <button type="submit" className={styles.submit} disabled={submitting || !settingsLoaded}>
+            {!settingsLoaded ? 'Loading...' : submitting ? 'Creating account...' : kind === 'buyer' ? 'Create buyer account' : 'Create supplier account'}
           </button>
-          <div className={styles.helper}>After signup you will be sent to sign in with the same return path: {returnTo}</div>
+          <div className={styles.helper}>After registration you will be redirected to sign in.</div>
         </div>
       </form>
 
@@ -369,10 +372,6 @@ export function RegistrationForm({ kind, returnTo }: Props) {
             <div className={styles.asideItem}>
               <span>Public route</span>
               <strong>Live</strong>
-            </div>
-            <div className={styles.asideItem}>
-              <span>Return path</span>
-              <strong>{returnTo}</strong>
             </div>
             <div className={styles.asideItem}>
               <span>Password rule</span>

@@ -5,6 +5,7 @@ x-node-build: &node-build
 services:
   web:
     build: *node-build
+    env_file: .env.local
     environment:
       APP_URL: ${APP_URL:-http://localhost:3001}
       WEB_URL: ${WEB_URL:-http://localhost:3001}
@@ -22,6 +23,7 @@ services:
 
   admin:
     build: *node-build
+    env_file: .env.local
     environment:
       APP_URL: ${ADMIN_URL:-http://localhost:3002/admin}
       ADMIN_URL: ${ADMIN_URL:-http://localhost:3002/admin}
@@ -39,6 +41,7 @@ services:
 
   api:
     build: *node-build
+    env_file: .env.local
     environment:
       APP_URL: ${APP_URL:-http://localhost:3001}
       WEB_URL: ${WEB_URL:-http://localhost:3001}
@@ -53,17 +56,43 @@ services:
       KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080/auth}
       KEYCLOAK_ISSUER: ${KEYCLOAK_ISSUER:-http://localhost:8080/auth/realms/ruflo}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
+      KEYCLOAK_BOOTSTRAP_ON_STARTUP: ${KEYCLOAK_BOOTSTRAP_ON_STARTUP:-true}
+      SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_FROM: ${SMTP_FROM:-noreply@localhost}
       SMTP_REPLY_TO: ${SMTP_REPLY_TO:-support@localhost}
       SMTP_SUPPORT_EMAIL: ${SMTP_SUPPORT_EMAIL:-support@localhost}
 
   worker:
     build: *node-build
+    env_file: .env.local
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MEILI_HOST: ${MEILI_HOST:-http://meilisearch:7700}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY}
 
   ai-worker:
     build: *node-build
+    env_file: .env.local
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_CONTENT_API_KEY: ${AI_CONTENT_API_KEY:-}
+      AI_CONTENT_BASE_URL: ${AI_CONTENT_BASE_URL:-}
+      AI_CONTENT_MODEL: ${AI_CONTENT_MODEL:-}
 
   keycloak:
+    env_file: .env.local
     command:
       - start
       - --optimized

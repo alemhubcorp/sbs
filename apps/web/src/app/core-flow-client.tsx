@@ -576,7 +576,7 @@ export function ProductCatalogClient({ products, viewerRole }: { products: Produ
                 {availabilityLabel(product.availabilityStatus)}
               </span>
             </div>
-            <div className={styles.catalogName}>{product.name}</div>
+            <Link href={`/products/${product.slug}`} className={styles.catalogName} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>{product.name}</Link>
             <div className={styles.catalogMeta}>
               <div>{product.category?.name ?? 'Uncategorized'}</div>
               <div>{product.sellerProfile?.displayName ?? 'Unknown seller'}</div>

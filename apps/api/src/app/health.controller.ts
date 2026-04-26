@@ -13,6 +13,19 @@ interface DependencyHealth {
   error?: string;
 }
 
+interface PublicDependencyHealth {
+  status: DependencyState;
+  latencyMs?: number;
+  error?: string;
+}
+
+function redactHealth(dep: DependencyHealth): PublicDependencyHealth {
+  const result: PublicDependencyHealth = { status: dep.status };
+  if (dep.latencyMs !== undefined) result.latencyMs = dep.latencyMs;
+  if (dep.error !== undefined) result.error = dep.error;
+  return result;
+}
+
 function normalizeError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -159,12 +172,16 @@ export class HealthController {
     try {
       const dependencies = await this.collectDependencyHealth();
 
+      const publicDeps = Object.fromEntries(
+        Object.entries(dependencies).map(([k, v]) => [k, redactHealth(v)])
+      );
+
       return {
         status: Object.values(dependencies).every((dependency) => dependency.status === 'up')
           ? 'ok'
           : 'degraded',
         app,
-        dependencies
+        dependencies: publicDeps
       };
     } catch (error) {
       return {
@@ -194,10 +211,14 @@ export class HealthController {
     try {
       const dependencies = await this.collectDependencyHealth();
       const ready = Object.values(dependencies).every((dependency) => dependency.status !== 'down');
+      const publicDeps = Object.fromEntries(
+        Object.entries(dependencies).map(([k, v]) => [k, redactHealth(v)])
+      );
+
       return {
         status: ready ? 'ready' : 'degraded',
         app,
-        dependencies
+        dependencies: publicDeps
       };
     } catch (error) {
       return {

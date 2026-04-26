@@ -100,10 +100,6 @@ export function ForgotPasswordClient({ returnTo }: { returnTo: string }) {
           </div>
           <div className={styles.statusList}>
             <div className={styles.statusRow}>
-              <span>Return path</span>
-              <strong>{returnTo}</strong>
-            </div>
-            <div className={styles.statusRow}>
               <span>Token lifetime</span>
               <strong>30 min</strong>
             </div>

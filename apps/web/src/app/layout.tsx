@@ -1,4 +1,5 @@
 ﻿import type { ReactNode } from 'react';
+import './globals.css';
 
 export const metadata = {
   title: 'Alemhub - Global B2B2C Trade Platform',
@@ -8,7 +9,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, background: '#fff', color: '#111' }}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

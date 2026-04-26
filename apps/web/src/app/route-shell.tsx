@@ -186,7 +186,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
     <main className={styles.page}>
       <nav className={styles.nav}>
         <Link href="/" className={styles.logo}>
-          <div className={styles.logoBox}>SC</div>
+          <div className={styles.logoBox}>A</div>
           Alemhub
         </Link>
         <div className={styles.navLinks}>
@@ -267,7 +267,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
         <div className={styles.footerGrid}>
           <div>
             <Link href="/" className={styles.logo}>
-              <div className={styles.logoBox}>SC</div>
+              <div className={styles.logoBox}>A</div>
               Alemhub
             </Link>
             <p className={styles.footerAbout}>

@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    REGISTER PAGE — Role selector + form
    Alemhub  |  globals.css tokens required
    ============================================================ */
@@ -18,12 +18,313 @@
 .page * { box-sizing: border-box; }
 .page a { text-decoration: none; color: inherit; }
 
+/* ── Shell — two-column layout (form + aside) ─────────────── */
 .shell {
-  width: min(900px, 100%);
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .shell { grid-template-columns: 1fr; }
+}
+
+/* ── Form card ────────────────────────────────────────────── */
+.form {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-2xl);
+  padding: 32px;
+  box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
+@media (max-width: 560px) {
+  .form { padding: 24px 18px; }
+}
+
+/* ── Form intro ───────────────────────────────────────────── */
+.intro { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--teal);
+}
+
+.title {
+  font-size: clamp(1.3rem, 2.5vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--navy);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.copy {
+  font-size: 14px;
+  color: var(--gray-500);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ── Field grid ───────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ── Individual field ─────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--r-lg);
+  font-size: 14px;
+  font-family: var(--font);
+  color: var(--gray-900);
+  background: var(--white);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(10, 123, 97, 0.12);
+}
+
+.field input::placeholder { color: var(--gray-400); }
+
+/* ── Password field wrapper ───────────────────────────────── */
+.passwordWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordWrap input {
+  padding-right: 64px;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font);
+  color: var(--teal);
+  cursor: pointer;
+  border-radius: var(--r-md);
+  transition: background var(--dur-fast) var(--ease);
+  letter-spacing: .02em;
+}
+.passwordToggle:hover { background: var(--teal-light); }
+
+/* ── Error & notice messages ──────────────────────────────── */
+.error {
+  padding: 12px 16px;
+  border-radius: var(--r-lg);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-bd);
+  color: var(--danger-tx);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.notice {
+  padding: 12px 16px;
+  border-radius: var(--r-lg);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ── Consent card ─────────────────────────────────────────── */
+.consentCard {
+  padding: 16px 18px;
+  border-radius: var(--r-xl);
+  background: var(--gray-50);
+  border: 1.5px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.consentTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--gray-500);
+}
+
+.consentList { display: flex; flex-direction: column; gap: 10px; }
+
+.consentItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--gray-700);
+  line-height: 1.5;
+}
+
+.consentItem input[type="checkbox"] {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.consentItem a {
+  color: var(--teal);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Form actions ─────────────────────────────────────────── */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.submit {
+  width: 100%;
+  padding: 13px 24px;
+  background: linear-gradient(135deg, var(--teal), #0d9488);
+  color: var(--white);
+  border: none;
+  border-radius: var(--r-xl);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  letter-spacing: .01em;
+}
+.submit:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+.submit:active:not(:disabled) { transform: translateY(0); }
+.submit:disabled { opacity: .55; cursor: not-allowed; }
+
+.helper {
+  font-size: 12px;
+  color: var(--gray-400);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ── Aside ────────────────────────────────────────────────── */
+.aside {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.asideCard {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-2xl);
+  padding: 22px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.asideLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--gray-400);
+}
+
+.asideValue {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+
+.asideCopy {
+  font-size: 13px;
+  color: var(--gray-500);
+  line-height: 1.65;
+}
+
+.asideList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--gray-100);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+
+.bullet {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bulletTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.bulletCopy {
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.55;
+}
+
+.asideItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--gray-600);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+.asideItem:last-child { border-bottom: none; }
+.asideItem strong { color: var(--navy); font-weight: 700; }
+
+/* ═══════════════════════════════════════════════════════════
+   Role selector (root /register page)
+   ─────────────────────────────────────────────────────────── */
 
 .header { text-align: center; }
 
@@ -47,22 +348,6 @@
   box-shadow: 0 2px 8px rgba(10,123,97,.3);
 }
 
-.eyebrow {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--teal);
-  margin-bottom: 10px;
-}
-.title {
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 900;
-  letter-spacing: -0.04em;
-  color: var(--navy);
-  margin-bottom: 10px;
-  line-height: 1.05;
-}
 .subtitle {
   font-size: 15px;
   color: var(--gray-500);
@@ -71,7 +356,6 @@
   margin: 0 auto;
 }
 
-/* Role cards */
 .roleGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

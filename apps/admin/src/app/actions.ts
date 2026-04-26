@@ -626,8 +626,8 @@ export async function testEmailConfigurationAction(_prevStateOrFormData: unknown
       'POST',
       {
         recipientEmail,
-        subject: String(formData.get('subject') ?? 'RuFlo SMTP test'),
-        message: String(formData.get('message') ?? 'This is a test message from the RuFlo admin settings page.')
+        subject: String(formData.get('subject') ?? 'Alemhub SMTP test'),
+        message: String(formData.get('message') ?? 'This is a test message from the Alemhub admin panel.')
       },
       ['/admin', '/admin/settings/smtp']
     );

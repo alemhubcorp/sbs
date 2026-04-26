@@ -38,10 +38,10 @@ export default async function LogisticsPage() {
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#7dd3fc' }}>Logistics Control</div>
           <div style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)', fontWeight: 900, lineHeight: 1.05 }}>
-            Shipment control stays on the live production domain.
+            Shipment control from one place.
           </div>
           <div style={{ color: '#cbd5e1', lineHeight: 1.7 }}>
-            The logistics route is production-safe, HTTPS-only, and connected to the same marketplace navigation used by requests, orders, deals, and tracking.
+            The logistics route is HTTPS-only and connected to the same marketplace navigation used by requests, orders, deals, and tracking.
           </div>
         </div>
 

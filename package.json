@@ -31,11 +31,11 @@
     "compose:up": "docker compose up -d",
     "rollout:prod": "npm run compose:build && docker compose up -d keycloak api web admin worker ai-worker",
     "compose:down": "docker compose down",
-    "local:build": "docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml build node-prod-base keycloak",
-    "local:up": "docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml up -d",
-    "local:down": "docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml down",
+    "local:build": "docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml build node-prod-base keycloak",
+    "local:up": "docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d",
+    "local:down": "docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml down",
     "local:check": "bash scripts/local-runtime-check.sh",
-    "local:rebuild:admin": "docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml stop admin && docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml rm -f admin && docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml build --no-cache admin && docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml up -d admin"
+    "local:rebuild:admin": "docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml stop admin && docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml rm -f admin && docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml build --no-cache admin && docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml up -d admin"
   },
   "engines": {
     "node": ">=22.0.0"

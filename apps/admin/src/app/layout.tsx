@@ -1,17 +1,19 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'RuFlo Admin',
-  description: 'RuFlo admin control center'
+  title: 'Alemhub Admin',
+  description: 'Alemhub admin control center'
 };
 
 const navItems = [
-  { label: 'Command Deck', description: 'Executive overview' },
-  { label: 'Approvals', description: 'Role and access control' },
-  { label: 'Escrow Ops', description: 'Protected payment actions' },
-  { label: 'Supply Flow', description: 'RFQs, contracts, logistics' },
-  { label: 'Partners', description: 'Directory and health' },
-  { label: 'SMTP', description: 'Notification infrastructure' }
+  { label: 'Command Deck', description: 'Executive overview', href: '/' },
+  { label: 'Users', description: 'Accounts and roles', href: '/users' },
+  { label: 'Partners', description: 'Directory and health', href: '/partners' },
+  { label: 'Payments', description: 'Transactions and escrow', href: '/payments' },
+  { label: 'SMTP', description: 'Notification infrastructure', href: '/settings/smtp' },
+  { label: 'Platform Settings', description: 'Fees, features, and config', href: '/settings/platform' },
+  { label: 'Legal Documents', description: 'Terms, privacy, policies', href: '/settings/legal' }
 ];
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -98,7 +100,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       letterSpacing: '-0.05em'
                     }}
                   >
-                    RuFlo Admin
+                    Alemhub Admin
                   </h1>
                   <p style={{ margin: '10px 0 0', color: '#b8c4d6', lineHeight: 1.6 }}>
                     Premium operating console for escrow-sensitive marketplace oversight.
@@ -163,8 +165,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
               <nav style={{ display: 'grid', gap: 12 }}>
                 {navItems.map((item, index) => (
-                  <div
+                  <Link
                     key={item.label}
+                    href={item.href}
                     style={{
                       display: 'grid',
                       gridTemplateColumns: 'auto 1fr',
@@ -174,7 +177,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       borderRadius: 20,
                       background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.38) 0%, rgba(15, 23, 42, 0.18) 100%)',
                       border: '1px solid rgba(148, 163, 184, 0.16)',
-                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+                      textDecoration: 'none',
+                      color: 'inherit'
                     }}
                   >
                     <div
@@ -197,7 +202,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                       <div style={{ fontWeight: 600 }}>{item.label}</div>
                       <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 13, lineHeight: 1.5 }}>{item.description}</div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </nav>
 

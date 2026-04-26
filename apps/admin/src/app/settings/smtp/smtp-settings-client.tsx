@@ -64,10 +64,10 @@ export function SmtpSettingsClient({ current }: { current: EmailSetting }) {
           <input name="smtpPort" defaultValue={String(current.smtpPort ?? 587)} placeholder="SMTP_PORT" type="number" />
           <input name="smtpUser" defaultValue={current.smtpUser ?? ''} placeholder="SMTP_USER" />
           <input name="smtpPassword" type="password" placeholder="SMTP_PASS (leave blank to keep)" />
-          <input name="fromName" defaultValue={current.fromName ?? 'RuFlo Marketplace'} placeholder="SMTP_FROM_NAME" />
-          <input name="fromEmail" defaultValue={current.fromEmail ?? 'noreply@ruflo.local'} placeholder="SMTP_FROM" />
-          <input name="replyToEmail" defaultValue={current.replyToEmail ?? 'support@ruflo.local'} placeholder="Reply to" />
-          <input name="supportEmail" defaultValue={current.supportEmail ?? 'support@ruflo.local'} placeholder="Support email" />
+          <input name="fromName" defaultValue={current.fromName ?? 'Alemhub Marketplace'} placeholder="SMTP_FROM_NAME" />
+          <input name="fromEmail" defaultValue={current.fromEmail ?? 'noreply@alemhub.com'} placeholder="SMTP_FROM" />
+          <input name="replyToEmail" defaultValue={current.replyToEmail ?? 'support@alemhub.com'} placeholder="Reply to" />
+          <input name="supportEmail" defaultValue={current.supportEmail ?? 'support@alemhub.com'} placeholder="Support email" />
           <input name="supportPhone" defaultValue={current.supportPhone ?? ''} placeholder="Support phone" />
           <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input type="checkbox" name="smtpSecure" defaultChecked={Boolean(current.smtpSecure)} /> SMTP secure
@@ -88,9 +88,9 @@ export function SmtpSettingsClient({ current }: { current: EmailSetting }) {
           Use this after saving credentials to verify real delivery before enabling password reset for end users.
         </p>
         <form action={testAction} style={{ display: 'grid', gap: 8 }}>
-          <input name="recipientEmail" defaultValue="ops@ruflo.local" placeholder="Test recipient email" />
-          <input name="subject" defaultValue="RuFlo SMTP test" placeholder="Subject" />
-          <textarea name="message" defaultValue="This is a test email from the RuFlo admin control plane." placeholder="Message" />
+          <input name="recipientEmail" defaultValue="ops@alemhub.com" placeholder="Test recipient email" />
+          <input name="subject" defaultValue="Alemhub SMTP test" placeholder="Subject" />
+          <textarea name="message" defaultValue="This is a test email from the Alemhub admin panel." placeholder="Message" />
           <button type="submit" disabled={testPending}>
             {testPending ? 'Sending...' : 'Test SMTP Configuration'}
           </button>

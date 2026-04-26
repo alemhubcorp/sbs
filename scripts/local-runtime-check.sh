@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COMPOSE=(docker compose --env-file .env.local.example -f docker-compose.yml -f docker-compose.local.yml)
+COMPOSE=(docker compose --env-file .env.local -f docker-compose.yml -f docker-compose.local.yml)
 
 echo "== docker compose ps =="
 "${COMPOSE[@]}" ps

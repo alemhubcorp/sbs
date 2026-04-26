@@ -42,7 +42,7 @@ export default async function BuyerRegisterPage({ searchParams }: { searchParams
         {
           tag: 'Escrow',
           title: 'Pay with visibility',
-          body: 'Track payment status, confirmations, and order history in the same production-safe buyer flow.',
+          body: 'Track payment status, confirmations, and order history in the secure buyer flow.',
           href: '/buyer/payments',
           foot: 'Open buyer payments →'
         },
@@ -58,7 +58,7 @@ export default async function BuyerRegisterPage({ searchParams }: { searchParams
       <div style={{ display: 'grid', gap: 16 }}>
         <RegistrationForm kind="buyer" returnTo={returnTo} />
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/register/supplier" style={{ color: '#e2e8f0' }}>
+          <Link href="/register/supplier" style={{ color: 'var(--teal)' }}>
             Need a supplier account?
           </Link>
         </div>

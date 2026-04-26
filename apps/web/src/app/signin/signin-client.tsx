@@ -168,20 +168,7 @@ export function SignInClient({ returnTo, authState, registered, initialEmail }: 
               Password recovery uses the same production auth system. If SMTP is unavailable, the page now shows that explicitly instead of failing silently.
             </div>
           </div>
-          <div className={styles.statusList}>
-            <div className={styles.statusRow}>
-              <span>Return path</span>
-              <strong>{returnTo}</strong>
-            </div>
-            <div className={styles.statusRow}>
-              <span>Password UX</span>
-              <strong>Show / hide</strong>
-            </div>
-            <div className={styles.statusRow}>
-              <span>Fallback</span>
-              <strong>Direct password grant</strong>
-            </div>
-          </div>
+
         </aside>
       </div>
     </div>

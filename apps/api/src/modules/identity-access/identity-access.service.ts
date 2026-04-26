@@ -364,6 +364,28 @@ export class IdentityAccessService {
         await this.sendKeycloakVerifyEmail(internalUrl, realm, adminToken, keycloakUserId);
       }
 
+      const recipientName = `${payload.firstName} ${payload.lastName}`.trim();
+      const webUrl = this.resolveWebAppUrl();
+      void this.emailService.sendEmail(
+        'auth.registration.welcome',
+        { id: user.id, email: user.email, name: recipientName },
+        {
+          subject: `Welcome to Alemhub, ${payload.firstName}!`,
+          title: `Registration complete`,
+          message: [
+            `Hi ${payload.firstName},`,
+            '',
+            `Your ${accountType} account has been created successfully.`,
+            '',
+            governance.emailVerificationRequired
+              ? 'Please check your inbox and verify your email address before signing in.'
+              : `You can sign in now at: ${webUrl}/signin`,
+            '',
+            'Thank you for joining Alemhub marketplace.'
+          ].join('\n')
+        }
+      );
+
       return {
         success: true,
         userId: user.id,

@@ -28,7 +28,7 @@ export default async function SupplierRegisterPage({ searchParams }: { searchPar
     <RouteShell
       eyebrow="Supplier registration"
       title="Create a supplier workspace built for RFQs, deals, and payout control."
-      description="Supplier accounts are created directly from this public form, then continue into the live marketplace with the same production-safe auth routing and return path."
+      description="Create a supplier account and continue into the marketplace to manage RFQs, deals, and payouts."
       primary={{ label: 'Sign in', href: `/signin?returnTo=${encodeURIComponent(returnTo)}` }}
       secondary={{ label: 'Open registration menu', href: '/register' }}
       cards={[
@@ -58,7 +58,7 @@ export default async function SupplierRegisterPage({ searchParams }: { searchPar
       <div style={{ display: 'grid', gap: 16 }}>
         <RegistrationForm kind="supplier" returnTo={returnTo} />
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/register/buyer" style={{ color: '#e2e8f0' }}>
+          <Link href="/register/buyer" style={{ color: 'var(--teal)' }}>
             Need a buyer account?
           </Link>
         </div>

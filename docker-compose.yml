@@ -13,20 +13,22 @@ services:
     command:
       - --api.dashboard=true
       - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
       - --providers.file.directory=/etc/traefik/dynamic
       - --providers.file.watch=true
     ports:
-      - "${TRAEFIK_HTTP_PORT:-80}:80"
-      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - "127.0.0.1:${TRAEFIK_HTTP_PORT:-80}:80"
+      - "127.0.0.1:${TRAEFIK_HTTPS_PORT:-443}:443"
     volumes:
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./infra/traefik/certs:/etc/traefik/certs:ro
     networks: [ruflo]
 
   web:
     image: ruflo-node-prod:latest
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/web"
-    env_file: .env.example
+    env_file: .env
     environment:
       NODE_ENV: production
       APP_URL: ${APP_URL:-https://alemhub.sbs}
@@ -39,10 +41,10 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       NEXT_PUBLIC_WEB_URL: ${WEB_URL:-https://alemhub.sbs}
     ports:
-      - "${WEB_PORT:-3001}:3001"
+      - "127.0.0.1:${WEB_PORT:-3001}:3001"
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.docker.network: "sbs_ruflo"
       traefik.http.routers.web.entrypoints: "web"
       traefik.http.routers.web.rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
       traefik.http.routers.web.priority: "10"
@@ -61,7 +63,7 @@ services:
     image: ruflo-node-prod:latest
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/admin"
-    env_file: .env.example
+    env_file: .env
     environment:
       NODE_ENV: production
       APP_URL: ${APP_URL:-https://alemhub.sbs}
@@ -75,10 +77,10 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       NEXT_PUBLIC_ADMIN_URL: ${ADMIN_URL:-https://alemhub.sbs/admin}
     ports:
-      - "${ADMIN_PORT:-3002}:3002"
+      - "127.0.0.1:${ADMIN_PORT:-3002}:3002"
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.docker.network: "sbs_ruflo"
       traefik.http.middlewares.admin-compliance-redirect.redirectregex.regex: "^https?://alemhub\\.sbs/admin/compliance/?$"
       traefik.http.middlewares.admin-compliance-redirect.redirectregex.replacement: "https://alemhub.sbs/compliance"
       traefik.http.middlewares.admin-compliance-redirect.redirectregex.permanent: "false"
@@ -93,7 +95,7 @@ services:
     image: ruflo-node-prod:latest
     working_dir: /workspace
     command: sh scripts/start-api-prod.sh
-    env_file: .env.example
+    env_file: .env
     environment:
       NODE_ENV: production
       APP_URL: ${APP_URL:-https://alemhub.sbs}
@@ -105,10 +107,6 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       KEYCLOAK_BOOTSTRAP_ON_STARTUP: "false"
       PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK: "1"
-      SMTP_ENABLED: "true"
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
-      SMTP_SECURE: "false"
       SMTP_FROM: ${SMTP_FROM:-noreply@alemhub.sbs}
       SMTP_REPLY_TO: ${SMTP_REPLY_TO:-support@alemhub.sbs}
       SMTP_SUPPORT_EMAIL: ${SMTP_SUPPORT_EMAIL:-support@alemhub.sbs}
@@ -126,10 +124,10 @@ services:
       mailpit:
         condition: service_started
     ports:
-      - "${API_PORT:-3000}:3000"
+      - "127.0.0.1:${API_PORT:-3000}:3000"
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.docker.network: "sbs_ruflo"
       traefik.http.routers.api.entrypoints: "web"
       traefik.http.routers.api.rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
       traefik.http.routers.api.priority: "90"
@@ -147,8 +145,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.26
     ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_WEB_PORT:-8025}:8025"
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_WEB_PORT:-8025}:8025"
     restart: unless-stopped
     networks: [ruflo]
 
@@ -156,7 +154,7 @@ services:
     image: ruflo-node-prod:latest
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/worker"
-    env_file: .env.example
+    env_file: .env
     environment:
       NODE_ENV: production
     depends_on:
@@ -175,7 +173,7 @@ services:
     image: ruflo-node-prod:latest
     working_dir: /workspace
     command: sh -c "npm run start -w @ruflo/ai-worker"
-    env_file: .env.example
+    env_file: .env
     environment:
       NODE_ENV: production
     depends_on:
@@ -195,7 +193,7 @@ services:
     volumes:
       - ./infra/data/postgres:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test:
         - CMD-SHELL
@@ -213,7 +211,7 @@ services:
     volumes:
       - ./infra/data/redis:/data
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     healthcheck:
       test:
         - CMD
@@ -234,8 +232,8 @@ services:
     volumes:
       - ./infra/data/minio:/data
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "127.0.0.1:${MINIO_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
     healthcheck:
       test:
         - CMD
@@ -255,7 +253,7 @@ services:
     volumes:
       - ./infra/data/meilisearch:/meili_data
     ports:
-      - "7700:7700"
+      - "127.0.0.1:7700:7700"
     healthcheck:
       test:
         - CMD
@@ -277,7 +275,8 @@ services:
       - start
       - --optimized
       - --http-port=8080
-      - --hostname=${KEYCLOAK_HOSTNAME:-alemhub.sbs}
+      - --hostname-url=https://${KEYCLOAK_HOSTNAME:-alemhub.sbs}/auth
+      - --hostname-admin-url=https://${KEYCLOAK_HOSTNAME:-alemhub.sbs}/auth
       - --hostname-strict=false
       - --hostname-strict-https=false
       - --proxy-headers=xforwarded
@@ -290,7 +289,6 @@ services:
       KC_DB_PASSWORD: keycloak
       KC_HTTP_ENABLED: "true"
       KC_HEALTH_ENABLED: "true"
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-alemhub.sbs}
       KC_HOSTNAME_STRICT: "false"
       KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_PROXY_HEADERS: xforwarded
@@ -298,10 +296,10 @@ services:
       keycloak-postgres:
         condition: service_healthy
     ports:
-      - "${KEYCLOAK_PORT:-8080}:8080"
+      - "127.0.0.1:${KEYCLOAK_PORT:-8080}:8080"
     labels:
       traefik.enable: "true"
-      traefik.docker.network: "ruflo_project_ruflo"
+      traefik.docker.network: "sbs_ruflo"
       traefik.http.routers.auth.entrypoints: "web"
       traefik.http.routers.auth.rule: "Host(`alemhub.sbs`) && PathPrefix(`/auth`)"
       traefik.http.routers.auth.priority: "100"
@@ -345,8 +343,8 @@ services:
     volumes:
       - ./infra/observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "4317:4317"
-      - "4318:4318"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
     restart: unless-stopped
     networks: [ruflo]
 
@@ -356,7 +354,7 @@ services:
       - ./infra/observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
     restart: unless-stopped
     networks: [ruflo]
 
@@ -364,12 +362,12 @@ services:
     image: grafana/grafana:11.5.2
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: change-me
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me}
     volumes:
       - grafana-data:/var/lib/grafana
       - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "${GRAFANA_PORT:-3003}:3000"
+      - "127.0.0.1:${GRAFANA_PORT:-3003}:3000"
     restart: unless-stopped
     networks: [ruflo]
 
@@ -380,7 +378,7 @@ services:
       - ./infra/observability/loki.yaml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
     ports:
-      - "${LOKI_PORT:-3100}:3100"
+      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
     restart: unless-stopped
     networks: [ruflo]
 
@@ -402,7 +400,7 @@ services:
       - ./infra/observability/tempo.yaml:/etc/tempo.yaml:ro
       - tempo-data:/tmp/tempo
     ports:
-      - "${TEMPO_PORT:-3200}:3200"
+      - "127.0.0.1:${TEMPO_PORT:-3200}:3200"
     restart: unless-stopped
     networks: [ruflo]
 

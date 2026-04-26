@@ -76,7 +76,7 @@ export function AdminSmtpSettingsBoard() {
   const [testing, setTesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [testEmail, setTestEmail] = useState('ops@ruflo.local');
+  const [testEmail, setTestEmail] = useState('ops@alemhub.com');
   const [passwordDraft, setPasswordDraft] = useState('');
 
   async function loadSetting() {
@@ -138,8 +138,8 @@ export function AdminSmtpSettingsBoard() {
         method: 'POST',
         body: JSON.stringify({
           recipientEmail: testEmail,
-          subject: 'RuFlo SMTP test',
-          message: 'This is a test message from the RuFlo admin settings page.'
+          subject: 'Alemhub SMTP test',
+          message: 'This is a test message from the Alemhub admin settings page.'
         })
       });
       setSuccess(result.success ? 'Test email sent successfully.' : `SMTP test failed: ${result.error ?? 'unknown error'}`);
@@ -163,10 +163,10 @@ export function AdminSmtpSettingsBoard() {
     smtpUser: '',
     smtpPassword: '',
     smtpSecure: false,
-    fromName: 'RuFlo Marketplace',
-    fromEmail: 'noreply@ruflo.local',
-    replyToEmail: 'support@ruflo.local',
-    supportEmail: 'support@ruflo.local',
+    fromName: 'Alemhub Marketplace',
+    fromEmail: 'noreply@alemhub.com',
+    replyToEmail: 'support@alemhub.com',
+    supportEmail: 'support@alemhub.com',
     supportPhone: '',
     notes: null,
     lastAttemptAt: null,
