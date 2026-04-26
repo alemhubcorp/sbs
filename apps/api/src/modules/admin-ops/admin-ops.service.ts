@@ -571,9 +571,9 @@ export class AdminOpsService {
       email: parsed.recipientEmail,
       name: parsed.recipientEmail
     }, {
-      subject: parsed.subject ?? 'RuFlo SMTP test',
+      subject: parsed.subject ?? 'Alemhub SMTP test',
       title: 'SMTP configuration test',
-      message: parsed.message ?? 'This is a test email sent from the RuFlo admin panel.'
+      message: parsed.message ?? 'This is a test email sent from the Alemhub admin panel.'
     });
 
     await this.auditService.record({
@@ -1455,17 +1455,18 @@ export class AdminOpsService {
     const email = isRecord(getSettingValue(rows, adminSettingKeys.email)) ? (getSettingValue(rows, adminSettingKeys.email) as Record<string, unknown>) : {};
     const enabled = getBoolean(email.enabled, false) || process.env.SMTP_ENABLED === 'true';
     const host = getString(email.smtpHost, process.env.SMTP_HOST ?? '');
-    const fromEmail = getString(email.fromEmail, process.env.SMTP_FROM ?? 'noreply@ruflo.local');
+    const fromEmail = getString(email.fromEmail, process.env.SMTP_FROM ?? 'noreply@alemhub.sbs');
     const smtpUser = getString(email.smtpUser, process.env.SMTP_USER ?? '');
     const smtpPassword = getString(email.smtpPassword, process.env.SMTP_PASS ?? '');
     const hasExplicitAuth = Boolean(smtpUser) && Boolean(smtpPassword);
     const usingEnvNoAuth = process.env.SMTP_ENABLED === 'true' && Boolean(host);
+    const usingNoAuth = !Boolean(smtpUser) && !Boolean(smtpPassword);
 
     return (
       enabled &&
       Boolean(host) &&
       Boolean(fromEmail) &&
-      (hasExplicitAuth || usingEnvNoAuth)
+      (hasExplicitAuth || usingEnvNoAuth || usingNoAuth)
     );
   }
 
@@ -1535,17 +1536,17 @@ export class AdminOpsService {
       : {};
 
     return {
-      platformLegalName: getString(platform.platformLegalName, 'RuFlo Marketplace Ltd'),
+      platformLegalName: getString(platform.platformLegalName, 'Alemhub Corp'),
       platformAddress: getString(platform.platformAddress, ''),
       platformRegistrationNumber: getString(platform.platformRegistrationNumber, ''),
       taxVatNumber: getString(platform.taxVatNumber, ''),
-      invoicingEmail: getString(platform.invoicingEmail, 'billing@ruflo.local'),
+      invoicingEmail: getString(platform.invoicingEmail, 'billing@alemhub.sbs'),
       defaultCurrency: getString(platform.defaultCurrency, 'USD'),
       invoiceFooter: getString(platform.invoiceFooter, ''),
       paymentInstructionsText: getString(platform.paymentInstructionsText, ''),
       complianceDisclaimerText: getString(platform.complianceDisclaimerText, ''),
-      beneficiaryName: getString(bank.beneficiaryName, getString(platform.platformLegalName, 'RuFlo Marketplace Ltd')),
-      legalEntityName: getString(bank.legalEntityName, getString(platform.platformLegalName, 'RuFlo Marketplace Ltd')),
+      beneficiaryName: getString(bank.beneficiaryName, getString(platform.platformLegalName, 'Alemhub Corp')),
+      legalEntityName: getString(bank.legalEntityName, getString(platform.platformLegalName, 'Alemhub Corp')),
       bankName: getString(bank.bankName, ''),
       bankAddress: getString(bank.bankAddress, ''),
       accountNumber: getString(bank.accountNumber, ''),
@@ -1554,9 +1555,9 @@ export class AdminOpsService {
       routingNumber: getString(bank.routingNumber, ''),
       branchCode: getString(bank.branchCode, ''),
       intermediaryBank: getString(bank.intermediaryBank, ''),
-      paymentReferencePrefix: getString(bank.paymentReferencePrefix, 'RFLO'),
-      invoicePrefix: getString(bank.invoicePrefix, 'INV'),
-      supportEmail: getString(bank.supportEmail, getString(email.supportEmail, 'support@ruflo.local')),
+      paymentReferencePrefix: getString(bank.paymentReferencePrefix, 'AH'),
+      invoicePrefix: getString(bank.invoicePrefix, 'AH'),
+      supportEmail: getString(bank.supportEmail, getString(email.supportEmail, 'support@alemhub.sbs')),
       supportPhone: getString(bank.supportPhone, getString(email.supportPhone, '')),
       legalDisclaimer: getString(compliance.legalDisclaimer, ''),
       termsSnippet: getString(compliance.termsSnippet, ''),
@@ -1574,11 +1575,11 @@ export class AdminOpsService {
       : {};
 
     return {
-      platformLegalName: getString(platform.platformLegalName, 'RuFlo Marketplace Ltd'),
+      platformLegalName: getString(platform.platformLegalName, 'Alemhub Corp'),
       platformAddress: getString(platform.platformAddress, ''),
       platformRegistrationNumber: getString(platform.platformRegistrationNumber, ''),
       taxVatNumber: getString(platform.taxVatNumber, ''),
-      invoicingEmail: getString(platform.invoicingEmail, 'billing@ruflo.local'),
+      invoicingEmail: getString(platform.invoicingEmail, 'billing@alemhub.sbs'),
       defaultCurrency: getString(platform.defaultCurrency, 'USD'),
       invoiceFooter: getString(platform.invoiceFooter, ''),
       paymentInstructionsText: getString(platform.paymentInstructionsText, ''),
@@ -1614,10 +1615,10 @@ export class AdminOpsService {
       smtpPort: getNumber(email.smtpPort, 587),
       smtpUser: getString(email.smtpUser, ''),
       smtpPassword: null,
-      fromName: getString(email.fromName, 'RuFlo Marketplace'),
-      fromEmail: getString(email.fromEmail, 'noreply@ruflo.local'),
-      replyToEmail: getString(email.replyToEmail, 'support@ruflo.local'),
-      supportEmail: getString(email.supportEmail, 'support@ruflo.local'),
+      fromName: getString(email.fromName, 'Alemhub Marketplace'),
+      fromEmail: getString(email.fromEmail, 'noreply@alemhub.sbs'),
+      replyToEmail: getString(email.replyToEmail, 'support@alemhub.sbs'),
+      supportEmail: getString(email.supportEmail, 'support@alemhub.sbs'),
       supportPhone: getString(email.supportPhone, ''),
       notes: getString(email.notes, '')
     };

@@ -644,8 +644,8 @@ export class PaymentOpsService {
     const email = isRecord(getSettingValue(rows, adminSettingKeys.email)) ? (getSettingValue(rows, adminSettingKeys.email) as Record<string, unknown>) : {};
 
     return {
-      beneficiaryName: getString(bank.beneficiaryName, getString(platform.platformLegalName, 'RuFlo Marketplace Ltd')),
-      legalEntityName: getString(bank.legalEntityName, getString(platform.platformLegalName, 'RuFlo Marketplace Ltd')),
+      beneficiaryName: getString(bank.beneficiaryName, getString(platform.platformLegalName, 'Alemhub Corp')),
+      legalEntityName: getString(bank.legalEntityName, getString(platform.platformLegalName, 'Alemhub Corp')),
       bankName: getString(bank.bankName, ''),
       bankAddress: getString(bank.bankAddress, ''),
       accountNumber: getString(bank.accountNumber, ''),
@@ -654,9 +654,9 @@ export class PaymentOpsService {
       routingNumber: getString(bank.routingNumber, ''),
       branchCode: getString(bank.branchCode, ''),
       intermediaryBank: getString(bank.intermediaryBank, ''),
-      paymentReferencePrefix: getString(bank.paymentReferencePrefix, 'RFLO'),
-      invoicePrefix: getString(bank.invoicePrefix, 'INV'),
-      supportEmail: getString(bank.supportEmail, getString(email.supportEmail, 'support@ruflo.local')),
+      paymentReferencePrefix: getString(bank.paymentReferencePrefix, 'AH'),
+      invoicePrefix: getString(bank.invoicePrefix, 'AH'),
+      supportEmail: getString(bank.supportEmail, getString(email.supportEmail, 'support@alemhub.sbs')),
       supportPhone: getString(bank.supportPhone, getString(email.supportPhone, ''))
     };
   }
@@ -667,11 +667,11 @@ export class PaymentOpsService {
       : {};
 
     return {
-      platformLegalName: getString(platform.platformLegalName, 'RuFlo Marketplace Ltd'),
+      platformLegalName: getString(platform.platformLegalName, 'Alemhub Corp'),
       platformAddress: getString(platform.platformAddress, ''),
       platformRegistrationNumber: getString(platform.platformRegistrationNumber, ''),
       taxVatNumber: getString(platform.taxVatNumber, ''),
-      invoicingEmail: getString(platform.invoicingEmail, 'billing@ruflo.local'),
+      invoicingEmail: getString(platform.invoicingEmail, 'billing@alemhub.sbs'),
       defaultCurrency: getString(platform.defaultCurrency, 'USD'),
       invoiceFooter: getString(platform.invoiceFooter, ''),
       paymentInstructionsText: getString(platform.paymentInstructionsText, ''),
@@ -719,9 +719,9 @@ export class PaymentOpsService {
     return {
       enabled: getBoolean(email.enabled, false),
       provider: getString(email.provider, 'smtp'),
-      fromEmail: getString(email.fromEmail, 'noreply@ruflo.local'),
-      replyToEmail: getString(email.replyToEmail, 'support@ruflo.local'),
-      supportEmail: getString(email.supportEmail, 'support@ruflo.local'),
+      fromEmail: getString(email.fromEmail, 'noreply@alemhub.sbs'),
+      replyToEmail: getString(email.replyToEmail, 'support@alemhub.sbs'),
+      supportEmail: getString(email.supportEmail, 'support@alemhub.sbs'),
       supportPhone: getString(email.supportPhone, '')
     };
   }

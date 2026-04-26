@@ -447,10 +447,10 @@ export class IdentityAccessService {
         name: recipientName
       },
       {
-        subject: 'Reset your RuFlo password',
+        subject: 'Reset your Alemhub password',
         title: 'Password reset requested',
         message: [
-          'We received a request to reset your RuFlo marketplace password.',
+          'We received a request to reset your Alemhub marketplace password.',
           '',
           `Open this secure link to continue: ${resetUrl}`,
           '',

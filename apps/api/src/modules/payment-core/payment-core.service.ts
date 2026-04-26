@@ -435,11 +435,11 @@ export class PaymentCoreService {
         bank_transfer: this.readProvider(rows, adminSettingKeys.bankTransferProvider)
       },
       bankReceiving: {
-        beneficiaryName: this.readStringSetting(rows, adminSettingKeys.bankReceiving, 'beneficiaryName', 'RuFlo Marketplace Ltd'),
+        beneficiaryName: this.readStringSetting(rows, adminSettingKeys.bankReceiving, 'beneficiaryName', 'Alemhub Corp'),
         bankName: this.readStringSetting(rows, adminSettingKeys.bankReceiving, 'bankName', 'Airwallex Global')
       },
       platformReceiving: {
-        platformLegalName: this.readStringSetting(rows, adminSettingKeys.platformReceiving, 'platformLegalName', 'RuFlo Marketplace Ltd')
+        platformLegalName: this.readStringSetting(rows, adminSettingKeys.platformReceiving, 'platformLegalName', 'Alemhub Corp')
       },
       paymentRouting: this.readRouting(rows)
     };

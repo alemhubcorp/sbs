@@ -92,33 +92,33 @@ export const defaultAdminSettings = [
     key: adminSettingKeys.bankReceiving,
     section: 'bank-receiving',
     value: {
-      beneficiaryName: 'RuFlo Holdings Ltd',
-      legalEntityName: 'RuFlo Holdings Ltd',
-      bankName: 'Primary Settlement Bank',
-      bankAddress: 'Bank street 1, Financial District',
-      accountNumber: '0000000000000000',
-      iban: 'GB00RUFLO00000000000000',
-      swiftBic: 'RUFLOGB2',
+      beneficiaryName: 'Alemhub Corp',
+      legalEntityName: 'Alemhub Corp',
+      bankName: 'Settlement Bank (configure in admin)',
+      bankAddress: '',
+      accountNumber: '',
+      iban: '',
+      swiftBic: '',
       routingNumber: '',
       branchCode: '',
       intermediaryBank: '',
-      paymentReferencePrefix: 'RFLO',
-      invoicePrefix: 'INV',
-      supportEmail: 'billing@ruflo.local',
-      supportPhone: '+1 555 0100'
+      paymentReferencePrefix: 'AH',
+      invoicePrefix: 'AH',
+      supportEmail: 'support@alemhub.sbs',
+      supportPhone: '+1 737 237 0456'
     }
   },
   {
     key: adminSettingKeys.platformReceiving,
     section: 'platform-receiving',
     value: {
-      platformLegalName: 'RuFlo Marketplace Ltd',
-      platformAddress: '1 RuFlo Plaza, Commerce City',
-      platformRegistrationNumber: 'REG-000000',
-      taxVatNumber: 'VAT-000000',
-      invoicingEmail: 'billing@ruflo.local',
+      platformLegalName: 'Alemhub Corp',
+      platformAddress: 'Alemhub Corp, USA & Kazakhstan (AIFC)',
+      platformRegistrationNumber: '',
+      taxVatNumber: '',
+      invoicingEmail: 'billing@alemhub.sbs',
       defaultCurrency: 'USD',
-      invoiceFooter: 'Thank you for trading on RuFlo Marketplace.',
+      invoiceFooter: 'Thank you for trading on Alemhub Marketplace.',
       paymentInstructionsText: 'Use the invoice reference exactly as shown to speed up reconciliation.',
       complianceDisclaimerText: 'Commercial terms may be subject to platform compliance review.'
     }
@@ -219,12 +219,12 @@ export const defaultAdminSettings = [
       smtpUser: '',
       smtpPassword: '',
       smtpSecure: false,
-      fromName: 'RuFlo Marketplace',
-      fromEmail: 'noreply@ruflo.local',
-      replyToEmail: 'support@ruflo.local',
-      supportEmail: 'support@ruflo.local',
-      supportPhone: '+1 555 0100',
-      notes: 'Configure SMTP or a provider here before enabling outbound email.',
+      fromName: 'Alemhub Marketplace',
+      fromEmail: 'noreply@alemhub.sbs',
+      replyToEmail: 'support@alemhub.sbs',
+      supportEmail: 'support@alemhub.sbs',
+      supportPhone: '+1 737 237 0456',
+      notes: 'Configure SMTP credentials before enabling outbound email.',
       lastAttemptAt: null,
       lastAttemptStatus: null,
       lastAttemptTransport: null,
@@ -303,7 +303,7 @@ export const defaultAdminSettings = [
         {
           id: 'hq',
           label: 'Head office',
-          value: '1 RuFlo Plaza, Commerce City',
+          value: 'Alemhub Corp, USA & Kazakhstan (AIFC)',
           active: true,
           displayOrder: 1
         }
@@ -312,7 +312,7 @@ export const defaultAdminSettings = [
         {
           id: 'support',
           label: 'Support',
-          value: '+1 555 0100',
+          value: '+1 737 237 0456',
           active: true,
           displayOrder: 1
         }
@@ -330,7 +330,7 @@ export const defaultAdminSettings = [
           footerLabel: 'Terms & Conditions',
           summary: 'Marketplace access, order terms, escrow rules, and dispute handling.',
           content:
-            'These Terms & Conditions govern access to the RuFlo marketplace, supplier listings, buyer orders, RFQ activity, escrow-backed settlements, dispute handling, and role-based obligations.',
+            'These Terms & Conditions govern access to the Alemhub marketplace, supplier listings, buyer orders, RFQ activity, escrow-backed settlements, dispute handling, and role-based obligations.',
           version: '2026.04',
           active: true,
           showInFooter: true
@@ -363,7 +363,7 @@ export const defaultAdminSettings = [
           footerLabel: 'Privacy Policy',
           summary: 'Data processing, KYC/KYB records, cookies, and communication preferences.',
           content:
-            'The Privacy Policy explains how RuFlo processes account data, KYC/KYB records, order and deal metadata, payment references, communication preferences, and operational logs.',
+            'The Privacy Policy explains how Alemhub processes account data, KYC/KYB records, order and deal metadata, payment references, communication preferences, and operational logs.',
           version: '2026.04',
           active: true,
           showInFooter: true

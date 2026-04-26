@@ -215,7 +215,7 @@ class SmtpSession {
 
 function buildMimeMessage(config: SmtpConfig, eventType: string, user: { id: string; email?: string | null; name?: string | null }, payload: EmailPayload) {
   const recipient = user.email ?? user.id;
-  const subject = isPlainObject(payload) && typeof payload.subject === 'string' ? payload.subject : `[RuFlo] ${eventType}`;
+  const subject = isPlainObject(payload) && typeof payload.subject === 'string' ? payload.subject : `[Alemhub] ${eventType}`;
   const title = isPlainObject(payload) && typeof payload.title === 'string' ? payload.title : eventType;
   const message = isPlainObject(payload) && typeof payload.message === 'string' ? payload.message : JSON.stringify(payload, null, 2);
   const lines = [
@@ -374,9 +374,9 @@ export class EmailService {
 
   async testConfiguration(recipientEmail: string) {
     return this.sendEmail('smtp.test', { id: recipientEmail, email: recipientEmail, name: 'SMTP Test' }, {
-      subject: 'RuFlo SMTP test',
+      subject: 'Alemhub SMTP test',
       title: 'SMTP test message',
-      message: 'This is a test message from RuFlo marketplace.'
+      message: 'This is a test message from Alemhub Marketplace.'
     });
   }
 
@@ -401,10 +401,10 @@ export class EmailService {
       secure: useStoredTransport ? getBoolean(config.smtpSecure, envSecure) : envSecure,
       user: useStoredTransport ? getString(config.smtpUser, envUser) : envUser,
       pass: useStoredTransport ? getString(config.smtpPassword, envPass) : envPass,
-      fromName: getString(config.fromName, 'RuFlo Marketplace'),
-      fromEmail: getString(config.fromEmail, process.env.SMTP_FROM ?? 'noreply@ruflo.local'),
-      replyToEmail: getString(config.replyToEmail, process.env.SMTP_REPLY_TO ?? 'support@ruflo.local'),
-      supportEmail: getString(config.supportEmail, process.env.SMTP_SUPPORT_EMAIL ?? 'support@ruflo.local'),
+      fromName: getString(config.fromName, 'Alemhub Marketplace'),
+      fromEmail: getString(config.fromEmail, process.env.SMTP_FROM ?? 'noreply@alemhub.sbs'),
+      replyToEmail: getString(config.replyToEmail, process.env.SMTP_REPLY_TO ?? 'support@alemhub.sbs'),
+      supportEmail: getString(config.supportEmail, process.env.SMTP_SUPPORT_EMAIL ?? 'support@alemhub.sbs'),
       supportPhone: getString(config.supportPhone, process.env.SMTP_SUPPORT_PHONE ?? ''),
     };
   }
