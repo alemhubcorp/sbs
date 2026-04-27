@@ -1,10 +1,5 @@
 http:
   middlewares:
-    admin-root-redirect:
-      redirectRegex:
-        regex: "^https?://alemhub\\.sbs/admin/?$"
-        replacement: "https://alemhub.sbs/admin/auth/login"
-        permanent: false
     admin-compliance-redirect:
       redirectRegex:
         regex: "^https?://alemhub\\.sbs/admin/compliance/?$"
@@ -32,81 +27,91 @@ http:
           X-Powered-By: ""
 
   routers:
-    # HTTP → HTTPS redirect (catches all plain HTTP traffic)
+    # ── HTTP routers (port 80) — cloudflared tunnel sends HTTP here ──────────
+    # These must have higher priority than http-catchall (priority 1).
+    # forwarded-https ensures backends receive X-Forwarded-Proto: https.
+
+    auth-http:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/auth`)"
+      entryPoints: [web]
+      middlewares: [forwarded-https]
+      service: auth
+      priority: 100
+
+    api-http:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
+      entryPoints: [web]
+      middlewares: [forwarded-https]
+      service: api
+      priority: 90
+
+    web-admin-extensions-http:
+      rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
+      entryPoints: [web]
+      middlewares: [forwarded-https]
+      service: web
+      priority: 85
+
+    admin-http:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/admin`)"
+      entryPoints: [web]
+      middlewares: [admin-compliance-redirect, forwarded-https]
+      service: admin
+      priority: 80
+
+    web-http:
+      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      entryPoints: [web]
+      middlewares: [forwarded-https]
+      service: web
+      priority: 10
+
+    # Catch any remaining plain-HTTP traffic and redirect to HTTPS
     http-catchall:
       rule: "Host(`alemhub.sbs`)"
-      entryPoints:
-        - web
-      middlewares:
-        - redirect-to-https
+      entryPoints: [web]
+      middlewares: [redirect-to-https]
       service: noop
       priority: 1
 
-    # HTTPS routers — served by websecure entrypoint only
-    admin-root:
-      rule: "Host(`alemhub.sbs`) && (Path(`/admin`) || Path(`/admin/`))"
-      entryPoints:
-        - websecure
-      middlewares:
-        - admin-root-redirect
-      service: admin
-      priority: 110
-      tls: {}
-
-    web:
-      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
-      entryPoints:
-        - websecure
-      middlewares:
-        - forwarded-https
-        - security-headers
-      service: web
-      tls: {}
-
-    admin:
-      rule: "Host(`alemhub.sbs`) && PathPrefix(`/admin`)"
-      entryPoints:
-        - websecure
-      middlewares:
-        - admin-root-redirect
-        - admin-compliance-redirect
-        - forwarded-https
-        - security-headers
-      service: admin
-      priority: 80
-      tls: {}
-
-    # Web app handles these admin-path pages that live in the web app, not admin app
-    web-admin-extensions:
-      rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
-      entryPoints:
-        - websecure
-      middlewares:
-        - forwarded-https
-        - security-headers
-      service: web
-      priority: 85
+    # ── HTTPS routers (port 443) — for direct TLS access ─────────────────────
+    auth:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/auth`)"
+      entryPoints: [websecure]
+      middlewares: [forwarded-https]
+      service: auth
+      priority: 100
       tls: {}
 
     api:
       rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
-      entryPoints:
-        - websecure
-      middlewares:
-        - forwarded-https
-        - security-headers
+      entryPoints: [websecure]
+      middlewares: [forwarded-https, security-headers]
       service: api
       priority: 90
       tls: {}
 
-    auth:
-      rule: "Host(`alemhub.sbs`) && PathPrefix(`/auth`)"
-      entryPoints:
-        - websecure
-      middlewares:
-        - security-headers
-      service: auth
-      priority: 100
+    web-admin-extensions:
+      rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
+      entryPoints: [websecure]
+      middlewares: [forwarded-https, security-headers]
+      service: web
+      priority: 85
+      tls: {}
+
+    admin:
+      rule: "Host(`alemhub.sbs`) && PathPrefix(`/admin`)"
+      entryPoints: [websecure]
+      middlewares: [admin-compliance-redirect, forwarded-https, security-headers]
+      service: admin
+      priority: 80
+      tls: {}
+
+    web:
+      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      entryPoints: [websecure]
+      middlewares: [forwarded-https, security-headers]
+      service: web
       tls: {}
 
   services:
