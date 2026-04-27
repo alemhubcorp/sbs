@@ -680,7 +680,7 @@ export class IdentityAccessService {
   }
 
   private async getKeycloakAdminToken(internalUrl: string, username: string, password: string) {
-    const response = await fetch(`${internalUrl}/realms/master/protocol/openid-connect/token`, {
+    const response = await this.fetchWithTimeout(`${internalUrl}/realms/master/protocol/openid-connect/token`, {
       method: 'POST',
       headers: {
         'content-type': 'application/x-www-form-urlencoded'
@@ -706,7 +706,7 @@ export class IdentityAccessService {
   }
 
   private async lookupKeycloakUserIdByEmail(internalUrl: string, realm: string, accessToken: string, email: string) {
-    const lookup = await fetch(
+    const lookup = await this.fetchWithTimeout(
       `${internalUrl}/admin/realms/${realm}/users?email=${encodeURIComponent(email)}&exact=true`,
       {
         headers: {
@@ -734,7 +734,7 @@ export class IdentityAccessService {
     keycloakUserId: string,
     password: string
   ) {
-    const response = await fetch(`${internalUrl}/admin/realms/${realm}/users/${keycloakUserId}/reset-password`, {
+    const response = await this.fetchWithTimeout(`${internalUrl}/admin/realms/${realm}/users/${keycloakUserId}/reset-password`, {
       method: 'PUT',
       headers: {
         authorization: `Bearer ${accessToken}`,
@@ -809,6 +809,23 @@ export class IdentityAccessService {
     ).replace(/\/+$/, '');
   }
 
+  private static readonly KEYCLOAK_TIMEOUT_MS = 8_000;
+
+  private async fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), IdentityAccessService.KEYCLOAK_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ServiceUnavailableException('The authentication service did not respond in time. Please try again in a moment.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async createKeycloakUser(
     internalUrl: string,
     realm: string,
@@ -816,7 +833,7 @@ export class IdentityAccessService {
     input: { firstName: string; lastName: string; email: string; password: string },
     options: { accountType: string; emailVerified: boolean; enabled: boolean }
   ) {
-    const existingResponse = await fetch(
+    const existingResponse = await this.fetchWithTimeout(
       `${internalUrl}/admin/realms/${realm}/users?email=${encodeURIComponent(input.email)}&exact=true`,
       {
         headers: {
@@ -834,7 +851,7 @@ export class IdentityAccessService {
       throw new ConflictException('An account with this email already exists.');
     }
 
-    const response = await fetch(`${internalUrl}/admin/realms/${realm}/users`, {
+    const response = await this.fetchWithTimeout(`${internalUrl}/admin/realms/${realm}/users`, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${accessToken}`,
@@ -875,7 +892,7 @@ export class IdentityAccessService {
       return userId;
     }
 
-    const lookup = await fetch(
+    const lookup = await this.fetchWithTimeout(
       `${internalUrl}/admin/realms/${realm}/users?email=${encodeURIComponent(input.email)}&exact=true`,
       {
         headers: {
@@ -899,7 +916,7 @@ export class IdentityAccessService {
   private async sendKeycloakVerifyEmail(internalUrl: string, realm: string, accessToken: string, userId: string) {
     const clientId = process.env.KEYCLOAK_WEB_CLIENT_ID ?? 'ruflo-web-ui';
     const redirectUri = `${this.resolveWebAppUrl()}/signin`;
-    const response = await fetch(
+    const response = await this.fetchWithTimeout(
       `${internalUrl}/admin/realms/${realm}/users/${userId}/execute-actions-email?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}`,
       {
         method: 'PUT',
@@ -917,7 +934,7 @@ export class IdentityAccessService {
   }
 
   private async updateKeycloakUserEnabled(internalUrl: string, realm: string, accessToken: string, userId: string, enabled: boolean) {
-    const response = await fetch(`${internalUrl}/admin/realms/${realm}/users/${userId}`, {
+    const response = await this.fetchWithTimeout(`${internalUrl}/admin/realms/${realm}/users/${userId}`, {
       method: 'PUT',
       headers: {
         authorization: `Bearer ${accessToken}`,
@@ -935,14 +952,14 @@ export class IdentityAccessService {
 
   private async deleteKeycloakUser(internalUrl: string, realm: string, accessToken: string, userId: string) {
     try {
-      await fetch(`${internalUrl}/admin/realms/${realm}/users/${userId}`, {
+      await this.fetchWithTimeout(`${internalUrl}/admin/realms/${realm}/users/${userId}`, {
         method: 'DELETE',
         headers: {
           authorization: `Bearer ${accessToken}`
         }
       });
     } catch {
-      // Best-effort cleanup.
+      // Best-effort cleanup — ignore errors and timeouts.
     }
   }
 }
