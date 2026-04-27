@@ -1,16 +1,15 @@
-import { SignInClient } from './signin-client';
+import { AuthClient } from './signin-client';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined> | undefined>;
 
 function readSingle(value?: string | string[]) {
-  return Array.isArray(value) ? value[0] ?? null : value ?? null;
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
 
 function normalizeReturnTo(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/auth') || value.startsWith('/become-')) {
     return '/dashboard';
   }
-
   return value;
 }
 
@@ -20,6 +19,20 @@ export default async function SignInPage({ searchParams }: { searchParams?: Sear
   const authState = readSingle(resolved?.auth);
   const registered = readSingle(resolved?.registered);
   const email = readSingle(resolved?.email) ?? '';
+  const modeParam = readSingle(resolved?.mode);
+  const roleParam = readSingle(resolved?.role);
 
-  return <SignInClient returnTo={returnTo} authState={authState} registered={registered} initialEmail={email} />;
+  const initialMode = modeParam === 'register' ? 'register' : 'signin';
+  const initialRole = roleParam === 'buyer' ? 'buyer' : roleParam === 'supplier' ? 'supplier' : null;
+
+  return (
+    <AuthClient
+      returnTo={returnTo}
+      authState={authState}
+      registered={registered}
+      initialEmail={email}
+      initialMode={initialMode}
+      initialRole={initialRole}
+    />
+  );
 }
