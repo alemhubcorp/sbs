@@ -38,13 +38,6 @@ http:
       service: auth
       priority: 100
 
-    api-http:
-      rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
-      entryPoints: [web]
-      middlewares: [forwarded-https]
-      service: api
-      priority: 90
-
     web-admin-extensions-http:
       rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
       entryPoints: [web]
@@ -60,7 +53,7 @@ http:
       priority: 80
 
     web-http:
-      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
       entryPoints: [web]
       middlewares: [forwarded-https]
       service: web
@@ -83,14 +76,6 @@ http:
       priority: 100
       tls: {}
 
-    api:
-      rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
-      entryPoints: [websecure]
-      middlewares: [forwarded-https, security-headers]
-      service: api
-      priority: 90
-      tls: {}
-
     web-admin-extensions:
       rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
       entryPoints: [websecure]
@@ -108,7 +93,7 @@ http:
       tls: {}
 
     web:
-      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      rule: "Host(`alemhub.sbs`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
       entryPoints: [websecure]
       middlewares: [forwarded-https, security-headers]
       service: web
@@ -124,11 +109,6 @@ http:
       loadBalancer:
         servers:
           - url: "http://admin:3002"
-
-    api:
-      loadBalancer:
-        servers:
-          - url: "http://api:3000"
 
     auth:
       loadBalancer:

@@ -47,7 +47,7 @@ services:
       traefik.enable: "true"
       traefik.docker.network: "sbs_ruflo"
       traefik.http.routers.web.entrypoints: "web"
-      traefik.http.routers.web.rule: "Host(`alemhub.sbs`) && !PathPrefix(`/api`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
+      traefik.http.routers.web.rule: "Host(`alemhub.sbs`) && !PathPrefix(`/auth`) && !PathPrefix(`/admin`)"
       traefik.http.routers.web.priority: "10"
       traefik.http.routers.web.middlewares: "forwarded-https@file"
       traefik.http.services.web.loadbalancer.server.port: "3001"
@@ -127,13 +127,7 @@ services:
     ports:
       - "127.0.0.1:${API_PORT:-3000}:3000"
     labels:
-      traefik.enable: "true"
-      traefik.docker.network: "sbs_ruflo"
-      traefik.http.routers.api.entrypoints: "web"
-      traefik.http.routers.api.rule: "Host(`alemhub.sbs`) && PathPrefix(`/api`)"
-      traefik.http.routers.api.priority: "90"
-      traefik.http.routers.api.middlewares: "forwarded-https@file"
-      traefik.http.services.api.loadbalancer.server.port: "3000"
+      traefik.enable: "false"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/health/readiness | grep -q '\"status\":\"ready\"' || exit 1"]
       interval: 15s

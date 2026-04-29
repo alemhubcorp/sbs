@@ -5,7 +5,18 @@ import {
   exchangeAuthorizationCode,
   getWebCookieOptions
 } from '../../../lib/auth';
-import { getMarketplaceViewer } from '../../../lib/marketplace-viewer';
+
+const internalApiBaseUrl =
+  process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+
+function deriveRole(roles?: string[]): string {
+  if (roles?.includes('platform_admin')) return 'admin';
+  if (roles?.includes('logistics_company')) return 'logistics';
+  if (roles?.includes('customs_broker')) return 'customs';
+  if (roles?.includes('supplier_user')) return 'supplier';
+  if (roles?.includes('customer_user')) return 'buyer';
+  return 'guest';
+}
 
 function resolvePostLoginPath(returnTo: string, role: string) {
   const genericTargets = new Set(['/', '/dashboard', '/signin', '/register', '/register/buyer', '/register/supplier']);
@@ -47,8 +58,23 @@ export async function GET(request: NextRequest) {
     if (session.profile.emailVerified === false) {
       return NextResponse.redirect(new URL('/signin?auth=email-verification-required', appUrl));
     }
-    const viewer = await getMarketplaceViewer();
-    const destination = resolvePostLoginPath(returnTo, viewer.role);
+
+    // Resolve role using the new session token directly (cookies not set yet on this response).
+    let role = 'guest';
+    try {
+      const ctxResponse = await fetch(`${internalApiBaseUrl}/api/identity/context`, {
+        headers: { authorization: `Bearer ${session.accessToken}` },
+        cache: 'no-store'
+      });
+      if (ctxResponse.ok) {
+        const ctx = (await ctxResponse.json()) as { roles?: string[] };
+        role = deriveRole(ctx.roles);
+      }
+    } catch {
+      // Fall back to guest; cookies still get set so user can retry protected pages.
+    }
+
+    const destination = resolvePostLoginPath(returnTo, role);
     const response = NextResponse.redirect(new URL(destination, appUrl));
     const cookieOptions = getWebCookieOptions(requestHost);
 
