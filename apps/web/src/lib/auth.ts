@@ -316,7 +316,7 @@ export async function getOptionalAccessToken() {
     return null;
   }
 
-  if (session.expiresAt <= Date.now() + refreshThresholdMs) {
+  if (session.expiresAt <= Date.now()) {
     return null;
   }
 
