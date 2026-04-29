@@ -1,169 +1,232 @@
-/* Auth entry, registration, and password recovery. */
+/* ─── Premium Auth — Alemhub B2B Trade Platform ─────────────────────────── */
 
+/* Page shell ---------------------------------------------------------------- */
 .page {
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 32px 20px;
   background:
-    linear-gradient(90deg, rgba(4, 120, 87, 0.07) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
-    linear-gradient(135deg, #f7fbf8 0%, #eef4f8 48%, #f8fafc 100%);
-  background-size: 72px 72px, 72px 72px, auto;
-  color: var(--navy);
+    radial-gradient(ellipse 110% 70% at 20% -5%,  rgba(4, 120, 87, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 80%  60% at 85% 105%, rgba(6, 78, 59, 0.20)  0%, transparent 50%),
+    radial-gradient(ellipse 60%  80% at 50% 50%,  rgba(11, 26, 51, 0.12) 0%, transparent 70%),
+    #03080f;
+  color: #f1f5f9;
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
 }
 
-.page * {
-  box-sizing: border-box;
-}
+.page * { box-sizing: border-box; }
 
 .page a {
   color: inherit;
   text-decoration: none;
 }
 
+/* Layout shell -------------------------------------------------------------- */
 .shell {
-  width: min(1180px, 100%);
+  width: min(1160px, 100%);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  gap: 16px;
   align-items: stretch;
 }
 
+/* ─── Form panel ──────────────────────────────────────────────────────────── */
 .panel {
   min-height: 560px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: clamp(28px, 4vw, 46px);
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  gap: 22px;
+  padding: clamp(32px, 4vw, 52px);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.025) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 28px;
-  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.13);
-  backdrop-filter: blur(14px);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.06) inset,
+    0 40px 100px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(4, 120, 87, 0.06);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
 }
 
+/* ─── Side panel ──────────────────────────────────────────────────────────── */
 .aside {
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  gap: 18px;
-  padding: 28px;
+  gap: 14px;
+  padding: 32px;
   border-radius: 28px;
   background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.09), transparent 34%),
-    linear-gradient(145deg, #0b1a33 0%, #11385a 58%, #064e3b 100%);
+    linear-gradient(160deg, rgba(255, 255, 255, 0.07) 0%, transparent 38%),
+    linear-gradient(145deg, #061628 0%, #0a2a47 45%, #042e1d 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
   color: #fff;
-  box-shadow: 0 26px 70px rgba(15, 23, 42, 0.2);
 }
 
+/* Brand mark */
 .aside::before {
-  content: "ALEMHUB";
+  content: "A";
   position: absolute;
-  top: 22px;
-  left: 28px;
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.22em;
-  color: rgba(255, 255, 255, 0.38);
+  top: -28px;
+  right: -22px;
+  font-size: 220px;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.025);
+  pointer-events: none;
+  user-select: none;
 }
 
+/* Luminous orb */
 .aside::after {
   content: "";
   position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(115deg, transparent 0 48%, rgba(255, 255, 255, 0.08) 48% 49%, transparent 49%),
-    linear-gradient(0deg, rgba(0, 0, 0, 0.18), transparent 52%);
+  top: -80px;
+  left: -80px;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(4, 120, 87, 0.22) 0%, transparent 68%);
   pointer-events: none;
 }
 
+/* Aside logo */
+.aside > *:first-child {
+  position: relative;
+  z-index: 1;
+  /* push to bottom via flex column + justify-content: flex-end */
+}
+
+/* Feature cards inside aside */
+.card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 220ms ease, border-color 220ms ease;
+}
+
+.card:hover {
+  background: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.cardTitle {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.cardCopy {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ─── Eyebrow badge ───────────────────────────────────────────────────────── */
 .eyebrow {
   width: fit-content;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 11px;
-  border: 1px solid rgba(4, 120, 87, 0.2);
+  padding: 7px 14px;
+  border: 1px solid rgba(4, 120, 87, 0.40);
   border-radius: 999px;
-  background: rgba(236, 253, 245, 0.92);
-  color: #047857;
-  font-size: 11px;
+  background: rgba(4, 120, 87, 0.14);
+  color: #34d399;
+  font-size: 10.5px;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .eyebrowDot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: #047857;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
 }
 
+/* ─── Headings ────────────────────────────────────────────────────────────── */
 .title {
-  max-width: 720px;
+  max-width: 680px;
   margin: 0;
-  color: #0b1a33;
-  font-size: clamp(2.15rem, 4.6vw, 3.65rem);
+  color: #f8fafc;
+  font-size: clamp(1.9rem, 4vw, 2.85rem);
   font-weight: 950;
-  letter-spacing: 0;
-  line-height: 0.96;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
 }
 
 .copy {
-  max-width: 660px;
-  margin: 10px 0 0;
-  color: #64748b;
-  font-size: 16px;
+  max-width: 580px;
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 15px;
   line-height: 1.7;
 }
 
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tab,
 .tabActive {
-  min-height: 42px;
+  min-height: 40px;
   border: 0;
   border-radius: 999px;
   font: inherit;
-  font-size: 14px;
-  font-weight: 850;
+  font-size: 13.5px;
+  font-weight: 800;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease;
 }
 
 .tab {
   background: transparent;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.40);
 }
 
 .tab:hover {
-  color: #0b1a33;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .tabActive {
-  color: #0b1a33;
-  background: #fff;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.10) inset,
+    0 4px 20px rgba(0, 0, 0, 0.30);
 }
 
+/* ─── Form ────────────────────────────────────────────────────────────────── */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .field,
@@ -175,56 +238,72 @@
 
 .field span,
 .fieldWide span {
-  color: #0f172a;
-  font-size: 13px;
-  font-weight: 850;
+  color: rgba(255, 255, 255, 0.60);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .field input,
 .fieldWide input {
   width: 100%;
   min-height: 52px;
-  padding: 0 16px;
-  border: 1px solid #cbd5e1;
-  border-radius: 15px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
   outline: none;
-  background: #fff;
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f1f5f9;
   font: inherit;
   font-size: 15px;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.field input::placeholder,
+.fieldWide input::placeholder {
+  color: rgba(255, 255, 255, 0.22);
 }
 
 .field input:hover,
 .fieldWide input:hover {
-  border-color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .field input:focus,
 .fieldWide input:focus {
-  border-color: #047857;
-  box-shadow: 0 0 0 4px rgba(4, 120, 87, 0.13);
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.10);
 }
 
 .fieldGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
+/* ─── Password wrapper ────────────────────────────────────────────────────── */
 .passwordWrap {
   display: flex;
   min-height: 52px;
   overflow: hidden;
-  border: 1px solid #cbd5e1;
-  border-radius: 15px;
-  background: #fff;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.passwordWrap:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .passwordWrap:focus-within {
-  border-color: #047857;
-  box-shadow: 0 0 0 4px rgba(4, 120, 87, 0.13);
+  border-color: rgba(16, 185, 129, 0.55);
+  background: rgba(16, 185, 129, 0.04);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.10);
 }
 
 .passwordWrap input {
@@ -233,93 +312,115 @@
   border-radius: 0;
   box-shadow: none;
   flex: 1;
+  background: transparent;
+}
+
+.passwordWrap input:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }
 
 .passwordWrap input:focus {
   box-shadow: none;
+  border-color: transparent;
+  background: transparent;
 }
 
 .passwordToggle {
-  min-width: 66px;
+  min-width: 64px;
   border: 0;
-  border-left: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #0b1a33;
+  border-left: 1px solid rgba(255, 255, 255, 0.07);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.40);
   font: inherit;
-  font-size: 13px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: background 160ms ease;
+  transition: color 160ms ease, background 160ms ease;
 }
 
 .passwordToggle:hover {
-  background: #eef2f7;
+  color: rgba(255, 255, 255, 0.80);
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.hint {
-  color: #64748b;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
+/* ─── Actions ─────────────────────────────────────────────────────────────── */
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 .submit,
 .secondary {
-  min-height: 50px;
+  min-height: 52px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border-radius: 999px;
-  padding: 0 24px;
+  padding: 0 28px;
   font: inherit;
   font-size: 14px;
   font-weight: 900;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 160ms ease, background 160ms ease;
+  letter-spacing: 0.01em;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 200ms ease,
+              opacity 200ms ease,
+              background 200ms ease;
 }
 
 .submit {
   border: 0;
-  background: linear-gradient(135deg, #0b1a33 0%, #123a71 100%);
+  background: linear-gradient(135deg, #10b981 0%, #047857 55%, #065f46 100%);
   color: #fff;
-  box-shadow: 0 16px 34px rgba(11, 26, 51, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.30) inset,
+    0 16px 40px rgba(4, 120, 87, 0.40),
+    0 4px 12px rgba(0, 0, 0, 0.30);
 }
 
-.submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 20px 40px rgba(11, 26, 51, 0.28);
+.submit:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.40) inset,
+    0 22px 50px rgba(4, 120, 87, 0.50),
+    0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.submit:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
 }
 
 .submit:disabled {
-  opacity: 0.64;
+  opacity: 0.50;
   cursor: wait;
   transform: none;
   box-shadow: none;
 }
 
 .secondary {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #0b1a33;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .secondary:hover {
-  border-color: #94a3b8;
-  background: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
 }
 
+/* ─── Alerts ──────────────────────────────────────────────────────────────── */
 .error,
 .success,
 .notice {
-  padding: 13px 15px;
+  padding: 12px 16px;
   border-radius: 16px;
   font-size: 13.5px;
   font-weight: 650;
@@ -327,21 +428,28 @@
 }
 
 .error {
-  border: 1px solid #fecaca;
-  background: #fff1f2;
-  color: #9f1239;
+  border: 1px solid rgba(239, 68, 68, 0.30);
+  background: rgba(239, 68, 68, 0.10);
+  color: #fca5a5;
 }
 
 .success {
-  border: 1px solid #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  background: rgba(16, 185, 129, 0.10);
+  color: #6ee7b7;
 }
 
 .notice {
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.30);
+  background: rgba(59, 130, 246, 0.10);
+  color: #93c5fd;
+}
+
+/* ─── Links & switch ──────────────────────────────────────────────────────── */
+.hint {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .linkRow {
@@ -356,7 +464,7 @@
 .backBtn {
   border: 0;
   background: transparent;
-  color: #047857;
+  color: #34d399;
   font: inherit;
   font-size: 13.5px;
   font-weight: 900;
@@ -367,12 +475,12 @@
 .link:hover,
 .switchLink:hover,
 .backBtn:hover {
-  color: #065f46;
+  color: #6ee7b7;
 }
 
 .switchHint {
   margin: 0;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.38);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -383,13 +491,14 @@
   align-items: center;
   gap: 6px;
   padding: 0;
-  margin: 0 0 12px;
+  margin: 0 0 10px;
 }
 
+/* ─── Role selection grid ─────────────────────────────────────────────────── */
 .roleGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .roleCard {
@@ -397,34 +506,44 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
-  padding: 22px;
-  border: 1px solid #dbe4ee;
+  gap: 10px;
+  padding: 22px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, rgba(236, 253, 245, 0.5), transparent 45%),
-    #fff;
-  color: #0f172a;
+    linear-gradient(160deg, rgba(16, 185, 129, 0.07) 0%, transparent 50%),
+    rgba(255, 255, 255, 0.04);
+  color: #f1f5f9;
   text-align: left;
   cursor: pointer;
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  transition:
+    border-color 220ms ease,
+    box-shadow    220ms ease,
+    transform     220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background    220ms ease;
 }
 
 .roleCard:hover {
-  border-color: rgba(4, 120, 87, 0.45);
-  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
-  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.35);
+  background:
+    linear-gradient(160deg, rgba(16, 185, 129, 0.14) 0%, transparent 50%),
+    rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.15) inset,
+    0 24px 56px rgba(4, 120, 87, 0.20),
+    0 4px 16px rgba(0, 0, 0, 0.30);
+  transform: translateY(-3px);
 }
 
 .roleIcon {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
-  border-radius: 15px;
-  border: 1px solid rgba(4, 120, 87, 0.18);
-  background: #ecfdf5;
-  color: #047857;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
 }
 
 .roleIcon svg {
@@ -433,36 +552,39 @@
 }
 
 .roleTitle {
-  color: #0b1a33;
+  color: #f8fafc;
   font-size: 17px;
   font-weight: 950;
+  letter-spacing: -0.01em;
 }
 
 .roleDesc {
-  color: #64748b;
-  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 13px;
   line-height: 1.6;
 }
 
 .roleArrow {
   margin-top: auto;
-  color: #047857;
-  font-size: 13px;
+  color: #34d399;
+  font-size: 12.5px;
   font-weight: 900;
+  letter-spacing: 0.02em;
 }
 
+/* ─── Consent ─────────────────────────────────────────────────────────────── */
 .consentCard {
-  padding: 14px 15px;
-  border: 1px solid #dbe4ee;
-  border-radius: 18px;
-  background: #f8fafc;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .consentItem {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  color: #334155;
+  gap: 11px;
+  color: rgba(255, 255, 255, 0.55);
   font-size: 13.5px;
   line-height: 1.58;
   cursor: pointer;
@@ -473,39 +595,16 @@
   height: 17px;
   margin-top: 2px;
   flex: 0 0 auto;
-  accent-color: #047857;
+  accent-color: #10b981;
+  cursor: pointer;
 }
 
 .consentItem a {
-  color: #047857;
+  color: #34d399;
   font-weight: 850;
 }
 
-.card {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 19px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-}
-
-.cardTitle {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 950;
-}
-
-.cardCopy {
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 13.5px;
-  line-height: 1.65;
-}
-
+/* ─── Status list (inside aside) ─────────────────────────────────────────── */
 .statusList {
   position: relative;
   z-index: 1;
@@ -519,8 +618,8 @@
   justify-content: space-between;
   gap: 14px;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.66);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.50);
   font-size: 12.5px;
 }
 
@@ -529,10 +628,11 @@
   border-top: 0;
 }
 
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 960px) {
   .page {
     place-items: start center;
-    padding: 22px 14px;
+    padding: 20px 14px;
   }
 
   .shell {
@@ -550,12 +650,12 @@
 
 @media (max-width: 560px) {
   .panel {
-    padding: 24px 18px;
-    border-radius: 22px;
+    padding: 28px 22px;
+    border-radius: 24px;
   }
 
   .title {
-    font-size: clamp(2rem, 12vw, 2.75rem);
+    font-size: clamp(1.75rem, 10vw, 2.4rem);
   }
 
   .fieldGrid,
@@ -580,18 +680,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tab,
-  .tabActive,
-  .field input,
-  .fieldWide input,
-  .passwordWrap,
-  .passwordToggle,
-  .submit,
-  .secondary,
-  .link,
-  .switchLink,
-  .backBtn,
-  .roleCard {
+  .tab, .tabActive,
+  .field input, .fieldWide input,
+  .passwordWrap, .passwordToggle,
+  .submit, .secondary,
+  .link, .switchLink, .backBtn,
+  .roleCard, .card {
     transition: none;
   }
 }
