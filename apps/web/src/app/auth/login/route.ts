@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createLoginRedirect, exchangePasswordCredentials, persistSession } from '../../../lib/auth';
+import {
+  buildWebCookieOptions,
+  buildWebLoginRequest,
+  cookieNames,
+  exchangePasswordCredentials
+} from '../../../lib/auth';
 
 const internalApiBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -49,7 +54,15 @@ function resolvePostLoginPath(returnTo: string, role: string) {
 
 export async function GET(request: NextRequest) {
   const returnTo = request.nextUrl.searchParams.get('returnTo') ?? '/';
-  await createLoginRedirect(returnTo, request.headers.get('host'));
+  const requestHost = request.headers.get('host');
+  const loginRequest = buildWebLoginRequest(returnTo, requestHost);
+  const response = NextResponse.redirect(loginRequest.authUrl);
+  const cookieOptions = getWebCookieOptions(requestHost);
+
+  response.cookies.set(cookieNames.state, loginRequest.state, cookieOptions);
+  response.cookies.set(cookieNames.returnTo, loginRequest.returnTo, cookieOptions);
+
+  return response;
 }
 
 export async function POST(request: NextRequest) {
@@ -79,8 +92,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await persistSession(session);
-
     let role = 'guest';
     try {
       const response = await fetch(`${internalApiBaseUrl}/api/identity/context`, {
@@ -98,10 +109,23 @@ export async function POST(request: NextRequest) {
       // Fall back to generic dashboard redirect.
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       redirectTo: resolvePostLoginPath(returnTo, role)
     });
+    const cookieOptions = getWebCookieOptions(request.headers.get('host'));
+
+    response.cookies.set(cookieNames.accessToken, session.accessToken, cookieOptions);
+    response.cookies.set(cookieNames.refreshToken, session.refreshToken, cookieOptions);
+    response.cookies.set(cookieNames.expiresAt, String(session.expiresAt), cookieOptions);
+
+    if (session.idToken) {
+      response.cookies.set(cookieNames.idToken, session.idToken, cookieOptions);
+    } else {
+      response.cookies.delete(cookieNames.idToken);
+    }
+
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to sign in right now.';
     return NextResponse.json({ success: false, error: message }, { status: message === 'Invalid email or password.' ? 401 : 500 });

@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { consumeLoginState, exchangeAuthorizationCode, persistSession } from '../../../lib/auth';
+import {
+  buildWebAppUrl,
+  cookieNames,
+  exchangeAuthorizationCode,
+  getWebCookieOptions
+} from '../../../lib/auth';
 import { getMarketplaceViewer } from '../../../lib/marketplace-viewer';
-
-function getPublicAppUrl(host?: string | null) {
-  const requestHost = host?.split(',')[0]?.trim();
-  if (requestHost && /^(localhost|127\.0\.0\.1|::1)(:\d+)?$/i.test(requestHost)) {
-    return `http://${requestHost}`;
-  }
-
-  return process.env.WEB_URL ?? process.env.NEXT_PUBLIC_WEB_URL ?? process.env.APP_URL ?? 'http://localhost:3001';
-}
 
 function resolvePostLoginPath(returnTo: string, role: string) {
   const genericTargets = new Set(['/', '/dashboard', '/signin', '/register', '/register/buyer', '/register/supplier']);
@@ -36,9 +32,10 @@ function resolvePostLoginPath(returnTo: string, role: string) {
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
   const returnedState = request.nextUrl.searchParams.get('state');
-  const { state, returnTo } = await consumeLoginState();
   const requestHost = request.headers.get('host');
-  const appUrl = getPublicAppUrl(requestHost);
+  const appUrl = buildWebAppUrl(requestHost);
+  const state = request.cookies.get(cookieNames.state)?.value ?? null;
+  const returnTo = request.cookies.get(cookieNames.returnTo)?.value ?? '/';
 
   if (!code || !returnedState || !state || returnedState !== state) {
     return NextResponse.redirect(new URL('/signin?auth=invalid-state', appUrl));
@@ -50,12 +47,24 @@ export async function GET(request: NextRequest) {
     if (session.profile.emailVerified === false) {
       return NextResponse.redirect(new URL('/signin?auth=email-verification-required', appUrl));
     }
-
-    await persistSession(session);
-
     const viewer = await getMarketplaceViewer();
     const destination = resolvePostLoginPath(returnTo, viewer.role);
-    return NextResponse.redirect(new URL(destination, appUrl));
+    const response = NextResponse.redirect(new URL(destination, appUrl));
+    const cookieOptions = getWebCookieOptions(requestHost);
+
+    response.cookies.delete(cookieNames.state);
+    response.cookies.delete(cookieNames.returnTo);
+    response.cookies.set(cookieNames.accessToken, session.accessToken, cookieOptions);
+    response.cookies.set(cookieNames.refreshToken, session.refreshToken, cookieOptions);
+    response.cookies.set(cookieNames.expiresAt, String(session.expiresAt), cookieOptions);
+
+    if (session.idToken) {
+      response.cookies.set(cookieNames.idToken, session.idToken, cookieOptions);
+    } else {
+      response.cookies.delete(cookieNames.idToken);
+    }
+
+    return response;
   } catch {
     return NextResponse.redirect(new URL('/signin?auth=callback-error', appUrl));
   }

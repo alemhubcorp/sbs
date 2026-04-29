@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangePasswordCredentials, persistSession } from '../../../lib/auth';
+import { cookieNames, exchangePasswordCredentials, getWebCookieOptions } from '../../../lib/auth';
 
 const internalApiBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -74,8 +74,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await persistSession(session);
-
     let role = 'guest';
     try {
       const response = await fetch(`${internalApiBaseUrl}/api/identity/context`, {
@@ -93,10 +91,23 @@ export async function POST(request: NextRequest) {
       // Fall back to a safe generic destination if role lookup fails.
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       redirectTo: resolvePostLoginPath(returnTo, role)
     });
+    const cookieOptions = getWebCookieOptions(request.headers.get('host'));
+
+    response.cookies.set(cookieNames.accessToken, session.accessToken, cookieOptions);
+    response.cookies.set(cookieNames.refreshToken, session.refreshToken, cookieOptions);
+    response.cookies.set(cookieNames.expiresAt, String(session.expiresAt), cookieOptions);
+
+    if (session.idToken) {
+      response.cookies.set(cookieNames.idToken, session.idToken, cookieOptions);
+    } else {
+      response.cookies.delete(cookieNames.idToken);
+    }
+
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to sign in right now.';
     return NextResponse.json({ success: false, error: message }, { status: message === 'Invalid email or password.' ? 401 : 500 });

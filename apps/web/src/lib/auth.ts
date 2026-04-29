@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-const cookieNames = {
+export const cookieNames = {
   accessToken: 'ruflo_web_access_token',
   refreshToken: 'ruflo_web_refresh_token',
   idToken: 'ruflo_web_id_token',
@@ -321,6 +321,39 @@ export async function getOptionalAccessToken() {
   }
 
   return session.accessToken;
+}
+
+export function buildWebAppUrl(requestHost?: string | null) {
+  const defaultAppUrl = process.env.WEB_URL ?? process.env.NEXT_PUBLIC_WEB_URL ?? process.env.APP_URL ?? 'http://localhost:3001';
+  return resolveAppUrl(defaultAppUrl, requestHost);
+}
+
+export function getWebCookieOptions(requestHost?: string | null) {
+  const { secureCookies } = getConfig(requestHost);
+  return {
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    secure: secureCookies,
+    path: '/'
+  };
+}
+
+export function buildWebLoginRequest(returnTo = '/', requestHost?: string | null) {
+  const { keycloakPublicUrl, realm, clientId, redirectUri } = getConfig(requestHost);
+  const state = crypto.randomUUID();
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid profile email',
+    state
+  });
+
+  return {
+    state,
+    returnTo,
+    authUrl: `${keycloakPublicUrl}/realms/${realm}/protocol/openid-connect/auth?${params.toString()}`
+  };
 }
 
 export function buildLogoutUrl(idTokenHint?: string | null, requestHost?: string | null) {
