@@ -646,30 +646,19 @@ export function SupplierProductsClient({ initialProductId }: { initialProductId?
 
   return (
     <div className={styles.stack}>
-      <div className={styles.heroPanel}>
-        <div className={styles.heroHeading}>
-          <div className={styles.sectionEyebrow}>Supplier catalog control</div>
-          <h2 className={styles.heroTitle}>Create real marketplace products and publish them into the live catalog.</h2>
-          <p className={styles.heroDescription}>
-            Drafts stay private, published products flow into the public listing, and every product remains bound to the supplier owner account.
-          </p>
+      {/* Compact stats bar — replaces the oversized heroPanel */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Total products</div>
+          <div className={styles.metricValue}>{summary.total}</div>
         </div>
-        <div className={styles.metricGrid}>
-          <div className={styles.metricCard}>
-            <div className={styles.metricLabel}>Products</div>
-            <div className={styles.metricValue}>{summary.total}</div>
-            <div className={styles.metricHint}>All products owned by this supplier account.</div>
-          </div>
-          <div className={styles.metricCard}>
-            <div className={styles.metricLabel}>Published</div>
-            <div className={styles.metricValue}>{summary.published}</div>
-            <div className={styles.metricHint}>Products already visible in the public marketplace.</div>
-          </div>
-          <div className={styles.metricCard}>
-            <div className={styles.metricLabel}>Draft / low stock</div>
-            <div className={styles.metricValue}>{summary.drafts} / {summary.lowStock}</div>
-            <div className={styles.metricHint}>Private drafts and listings that need stock attention.</div>
-          </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Published</div>
+          <div className={styles.metricValue}>{summary.published}</div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Draft / low stock</div>
+          <div className={styles.metricValue}>{summary.drafts} / {summary.lowStock}</div>
         </div>
       </div>
 

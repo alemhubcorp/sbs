@@ -135,6 +135,31 @@ function cabinetCopy(viewer: MarketplaceViewer, variant: 'dashboard' | 'admin') 
   };
 }
 
+function QuickLinks({ copy }: { copy: ReturnType<typeof cabinetCopy> }) {
+  // Show only the most important 4-6 links as quick-action buttons, not a full card grid.
+  const links = copy.cards.slice(0, 6);
+  if (!links.length) return null;
+
+  return (
+    <div className={styles.sectionCard}>
+      <div className={styles.sectionTitle} style={{ marginBottom: 14 }}>Quick actions</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+        {links.map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            className={styles.buttonSecondary}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '12px 16px', borderRadius: 14, textDecoration: 'none', height: 'auto' }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', opacity: 0.55 }}>{card.tag}</span>
+            <span style={{ fontWeight: 700 }}>{card.title}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export async function RoleCabinetPage({
   viewer,
   variant = 'dashboard',
@@ -147,33 +172,11 @@ export async function RoleCabinetPage({
   const copy = cabinetCopy(viewer, variant);
 
   return (
-    <RouteShell eyebrow={copy.eyebrow} title={copy.title} description={copy.description} primary={copy.primary} secondary={copy.secondary} cards={copy.cards}>
+    // No cards= prop — the card grid was confusing noise that duplicated the nav.
+    <RouteShell eyebrow={copy.eyebrow} title={copy.title} description={copy.description} primary={copy.primary} secondary={copy.secondary}>
       {overview ? <div style={{ marginBottom: 18 }}>{overview}</div> : null}
 
-      <div className={styles.sectionCard}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <div className={styles.sectionTitle}>Current role</div>
-            <div className={styles.muted}>{getRoleLabel(viewer.role)}</div>
-          </div>
-          <div className={styles.buttonRow}>
-            <Link href="/dashboard" className={styles.buttonSecondary}>
-              Dashboard
-            </Link>
-            {viewer.role === 'admin' ? (
-              <Link href="/admin" className={styles.button}>
-                Admin cabinet
-              </Link>
-            ) : null}
-          </div>
-        </div>
-
-        <div className={styles.inlineMeta}>
-          <span>Authenticated: {viewer.isAuthenticated ? 'yes' : 'no'}</span>
-          <span>Email: {viewer.email ?? 'n/a'}</span>
-          <span>User: {viewer.displayName ?? 'n/a'}</span>
-        </div>
-      </div>
+      <QuickLinks copy={copy} />
     </RouteShell>
   );
 }

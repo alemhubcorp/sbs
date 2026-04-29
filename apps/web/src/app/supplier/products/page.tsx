@@ -10,10 +10,10 @@ export default async function SupplierProductsPage() {
   return (
     <RouteShell
       eyebrow="Supplier"
-      title="Product creation and catalog control."
-      description="Create draft inventory, upload product images, publish marketplace-ready listings, and keep retail, wholesale, auction, preorder, and sale states aligned with the live catalog."
-      primary={{ label: 'Open public catalog', href: '/products' }}
-      secondary={{ label: 'Supplier dashboard', href: '/dashboard' }}
+      title="Products"
+      description="Create and publish your catalog. Drafts stay private until you publish."
+      primary={{ label: 'Public catalog', href: '/products' }}
+      secondary={{ label: 'Dashboard', href: '/dashboard' }}
     >
       {viewer.role === 'supplier' || viewer.role === 'admin' ? (
         <SupplierProductsClient />

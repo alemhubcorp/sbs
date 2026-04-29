@@ -316,11 +316,22 @@ export async function getOptionalAccessToken() {
     return null;
   }
 
-  if (session.expiresAt <= Date.now()) {
-    return null;
+  // Token is still valid — return it directly.
+  if (session.expiresAt > Date.now() + refreshThresholdMs) {
+    return session.accessToken;
   }
 
-  return session.accessToken;
+  // Token expired or within the refresh window — try a silent refresh.
+  try {
+    const refreshed = await refreshSessionTokens(session.refreshToken);
+    await persistSession(refreshed);
+    return refreshed.accessToken;
+  } catch {
+    // Refresh token is expired or revoked. Clear stale cookies so the user
+    // gets redirected to sign-in on the next protected request.
+    await clearSession();
+    return null;
+  }
 }
 
 export function buildWebAppUrl(requestHost?: string | null) {
