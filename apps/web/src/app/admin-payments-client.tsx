@@ -120,7 +120,7 @@ function adminJson<T>(path: string, init?: RequestInit) {
     }
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         if (typeof window !== 'undefined') {
           window.location.assign(`/signin?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
         }
@@ -384,7 +384,7 @@ async function paymentJson<T>(path: string, init?: RequestInit) {
     }
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      if (response.status === 401) {
         if (typeof window !== 'undefined') {
           window.location.assign(`/signin?returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
         }
