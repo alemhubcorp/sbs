@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  buildWebCookieOptions,
   buildWebLoginRequest,
   cookieNames,
-  exchangePasswordCredentials
+  exchangePasswordCredentials,
+  getWebCookieOptions
 } from '../../../lib/auth';
 
 const internalApiBaseUrl =
