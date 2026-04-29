@@ -22,6 +22,7 @@ services:
     volumes:
       - ./infra/traefik/dynamic:/etc/traefik/dynamic:ro
       - ./infra/traefik/certs:/etc/traefik/certs:ro
+    restart: unless-stopped
     networks: [ruflo]
 
   web:
