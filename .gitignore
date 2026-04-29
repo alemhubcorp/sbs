@@ -12,3 +12,4 @@ tmp
 data
 infra/traefik/certs/
 .gstack/
+*.tsbuildinfo
