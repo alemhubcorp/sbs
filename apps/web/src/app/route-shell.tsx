@@ -140,7 +140,6 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
   const accountItems = viewer.isAuthenticated
     ? [
         { label: 'Dashboard', href: '/dashboard' },
-        { label: 'Logout', href: '/logout' },
         { label: 'Cart', href: '/cart' },
         { label: 'Checkout', href: '/checkout' },
         { label: 'Order History', href: '/orders' },
@@ -208,9 +207,11 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
               <Link href="/dashboard" className={styles.btnLight}>
                 Dashboard
               </Link>
-              <Link href="/logout" prefetch={false} className={styles.btnDark}>
-                Logout
-              </Link>
+              <form action="/logout" method="post">
+                <button type="submit" className={styles.btnDark}>
+                  Logout
+                </button>
+              </form>
             </>
           ) : (
             <>
