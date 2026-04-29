@@ -30,6 +30,15 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+# Ensure Keycloak bootstrap runs on every deploy so seeded users always exist in Keycloak.
+if grep -q "^KEYCLOAK_BOOTSTRAP_ON_STARTUP=false" .env; then
+  sed -i 's/^KEYCLOAK_BOOTSTRAP_ON_STARTUP=false/KEYCLOAK_BOOTSTRAP_ON_STARTUP=true/' .env
+  log "updated KEYCLOAK_BOOTSTRAP_ON_STARTUP to true in .env"
+elif ! grep -q "^KEYCLOAK_BOOTSTRAP_ON_STARTUP" .env; then
+  echo "KEYCLOAK_BOOTSTRAP_ON_STARTUP=true" >> .env
+  log "added KEYCLOAK_BOOTSTRAP_ON_STARTUP=true to .env"
+fi
+
 log "validating docker compose configuration"
 docker compose config -q
 
