@@ -454,15 +454,16 @@ export class BootstrapService implements OnApplicationBootstrap {
       skipDuplicates: true
     });
 
+    const adminEmail = process.env.KEYCLOAK_BOOTSTRAP_ADMIN_EMAIL ?? 'admin@ruflo.local';
     const adminUser = await this.prismaService.client.user.upsert({
-      where: { email: 'admin@ruflo.local' },
+      where: { email: adminEmail },
       update: {
         firstName: 'Platform',
         lastName: 'Admin',
         status: 'active'
       },
       create: {
-        email: 'admin@ruflo.local',
+        email: adminEmail,
         firstName: 'Platform',
         lastName: 'Admin',
         status: 'active'
@@ -725,12 +726,17 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.ensureClient(internalUrl, headers, realm, adminClientId, adminClientSecret, adminAppUrl);
       await this.ensureClient(internalUrl, headers, realm, webClientId, webClientSecret, webAppUrl);
 
+      const bootstrapAdminEmail =
+        this.getConfigValue('auth.bootstrapAdminEmail', process.env.KEYCLOAK_BOOTSTRAP_ADMIN_EMAIL) ?? 'admin@ruflo.local';
+      const bootstrapAdminPassword =
+        this.getConfigValue('auth.bootstrapAdminPassword', process.env.KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD) ?? 'change-me-admin';
+
       await this.ensureUser(internalUrl, headers, realm, {
         username: 'platform-admin',
-        email: 'admin@ruflo.local',
+        email: bootstrapAdminEmail,
         firstName: 'Platform',
         lastName: 'Admin',
-        password: 'change-me-admin'
+        password: bootstrapAdminPassword
       });
 
       await this.ensureUser(internalUrl, headers, realm, {
