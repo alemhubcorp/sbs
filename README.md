@@ -49,6 +49,10 @@ Production-grade MVP scaffold for a self-hosted B2B2C marketplace-fintech platfo
 - Rebuild only local admin runtime cleanly: `npm run local:rebuild:admin`
 - Stop local stack: `npm run local:down`
 
+## Production Notes
+- Production Cloudflare ingress is managed by an external systemd `cloudflared` service on EC2, not by Docker Compose.
+- Tunnel and DNS invariants are documented in `docs/ops/cloudflare-tunnel.md`.
+
 ## Boundary Rules
 - Retail and wholesale transaction logic stay separate.
 - Payments, audit, and outbox/inbox are SQL-first.

@@ -3,6 +3,10 @@
 Systemd-юниты **генерируются автоматически** скриптом `scripts/setup-production.sh`
 с правильными путями для конкретного сервера.
 
+Важно: production tunnel `cloudflared` в текущей схеме является внешним systemd-сервисом
+хоста и не управляется `docker compose`.
+Проверочная документация: `docs/ops/cloudflare-tunnel.md`
+
 ## Установка на production-сервер (один раз)
 
 ```bash
