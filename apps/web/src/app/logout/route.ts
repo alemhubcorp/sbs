@@ -18,12 +18,17 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const session = await getOptionalSession();
   await clearSession();
-  const requestHost = request.headers.get('host');
-  const logoutUrl = buildLogoutUrl(session?.idToken, requestHost);
 
-  return NextResponse.redirect(logoutUrl, {
-    headers: {
-      Location: logoutUrl
-    }
-  });
+  // If we have an idToken, redirect through Keycloak's logout endpoint so it
+  // can clear the SSO session without showing the confirmation screen.
+  // Without id_token_hint Keycloak always prompts "Do you want to log out?".
+  // When the token is absent (e.g. password-grant login or cookie expired),
+  // skip the Keycloak round-trip — cookies are already cleared above.
+  if (session?.idToken) {
+    const requestHost = request.headers.get('host');
+    const logoutUrl = buildLogoutUrl(session.idToken, requestHost);
+    return NextResponse.redirect(logoutUrl, { headers: { Location: logoutUrl } });
+  }
+
+  return NextResponse.redirect(getSafeFallbackUrl(request));
 }
