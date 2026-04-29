@@ -76,10 +76,13 @@ if [[ -f .env ]]; then
   ADMIN_PASSWORD="${KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD:-change-me-admin}"
 fi
 
+# ── Call Keycloak via host-mapped port (Keycloak image has no curl) ────────────
+KC_HOST="http://127.0.0.1:${KEYCLOAK_PORT:-8080}/auth"
+
 # Wait for Keycloak to be reachable (up to 60s)
 KC_READY=false
 for i in $(seq 1 12); do
-  if docker compose exec -T keycloak curl -fs "http://localhost:8080/auth/realms/master" >/dev/null 2>&1; then
+  if curl -fs "${KC_HOST}/realms/master" >/dev/null 2>&1; then
     KC_READY=true
     break
   fi
@@ -91,48 +94,70 @@ if [[ "$KC_READY" == "false" ]]; then
   log "Keycloak not reachable; skipping admin user ensure step"
 else
   # Get master admin token
-  TOKEN=$(docker compose exec -T keycloak curl -fs -X POST \
-    "http://localhost:8080/auth/realms/master/protocol/openid-connect/token" \
+  TOKEN=$(curl -fs -X POST \
+    "${KC_HOST}/realms/master/protocol/openid-connect/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "grant_type=password&client_id=admin-cli&username=${KC_ADMIN_USER}&password=${KC_ADMIN_PASS}" \
     | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4 || true)
 
   if [[ -z "$TOKEN" ]]; then
-    log "could not obtain Keycloak admin token; skipping admin user ensure step"
+    log "could not obtain Keycloak admin token (check KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD); skipping"
   else
     log "got Keycloak admin token; checking realm and user"
 
     # Ensure ruflo realm exists
-    REALM_STATUS=$(docker compose exec -T keycloak curl -fs -o /dev/null -w "%{http_code}" \
+    REALM_STATUS=$(curl -fs -o /dev/null -w "%{http_code}" \
       -H "Authorization: Bearer ${TOKEN}" \
-      "http://localhost:8080/auth/admin/realms/${KC_REALM}" || echo "000")
+      "${KC_HOST}/admin/realms/${KC_REALM}" || echo "000")
 
     if [[ "$REALM_STATUS" == "404" ]]; then
       log "creating realm ${KC_REALM}"
-      docker compose exec -T keycloak curl -fs -X POST \
-        "http://localhost:8080/auth/admin/realms" \
+      curl -fs -X POST \
+        "${KC_HOST}/admin/realms" \
         -H "Authorization: Bearer ${TOKEN}" \
         -H "Content-Type: application/json" \
         -d "{\"realm\":\"${KC_REALM}\",\"enabled\":true,\"loginWithEmailAllowed\":true,\"registrationAllowed\":false,\"resetPasswordAllowed\":true,\"duplicateEmailsAllowed\":false}" \
         >/dev/null || log "realm creation returned error (may already exist)"
+    else
+      log "realm ${KC_REALM} exists (status ${REALM_STATUS})"
     fi
 
     # Check if platform-admin user exists
-    USER_COUNT=$(docker compose exec -T keycloak curl -fs \
+    USER_COUNT=$(curl -fs \
       -H "Authorization: Bearer ${TOKEN}" \
-      "http://localhost:8080/auth/admin/realms/${KC_REALM}/users?username=platform-admin&exact=true" \
+      "${KC_HOST}/admin/realms/${KC_REALM}/users?username=platform-admin&exact=true" \
       | grep -o '"id"' | wc -l || echo "0")
 
     if [[ "$USER_COUNT" -eq "0" ]]; then
       log "creating platform-admin user (${ADMIN_EMAIL})"
-      docker compose exec -T keycloak curl -fs -X POST \
-        "http://localhost:8080/auth/admin/realms/${KC_REALM}/users" \
+      curl -fs -X POST \
+        "${KC_HOST}/admin/realms/${KC_REALM}/users" \
         -H "Authorization: Bearer ${TOKEN}" \
         -H "Content-Type: application/json" \
         -d "{\"username\":\"platform-admin\",\"email\":\"${ADMIN_EMAIL}\",\"firstName\":\"Platform\",\"lastName\":\"Admin\",\"enabled\":true,\"emailVerified\":true,\"credentials\":[{\"type\":\"password\",\"value\":\"${ADMIN_PASSWORD}\",\"temporary\":false}]}" \
-        >/dev/null && log "platform-admin user created" || log "user creation failed (may already exist)"
+        >/dev/null && log "platform-admin user created successfully" || log "user creation returned error"
     else
-      log "platform-admin user already exists"
+      log "platform-admin user already exists in Keycloak"
+    fi
+
+    # Also ensure ruflo-web-ui client exists (required for password grant login)
+    WEB_CLIENT_ID="${KEYCLOAK_WEB_CLIENT_ID:-ruflo-web-ui}"
+    WEB_CLIENT_SECRET="${KEYCLOAK_WEB_CLIENT_SECRET:-change-me-web-client}"
+    CLIENT_COUNT=$(curl -fs \
+      -H "Authorization: Bearer ${TOKEN}" \
+      "${KC_HOST}/admin/realms/${KC_REALM}/clients?clientId=${WEB_CLIENT_ID}&search=false" \
+      | grep -o '"id"' | wc -l || echo "0")
+
+    if [[ "$CLIENT_COUNT" -eq "0" ]]; then
+      log "creating Keycloak client ${WEB_CLIENT_ID}"
+      curl -fs -X POST \
+        "${KC_HOST}/admin/realms/${KC_REALM}/clients" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"clientId\":\"${WEB_CLIENT_ID}\",\"enabled\":true,\"protocol\":\"openid-connect\",\"publicClient\":false,\"secret\":\"${WEB_CLIENT_SECRET}\",\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"redirectUris\":[\"*\"],\"webOrigins\":[\"*\"]}" \
+        >/dev/null && log "client ${WEB_CLIENT_ID} created" || log "client creation returned error"
+    else
+      log "client ${WEB_CLIENT_ID} already exists"
     fi
   fi
 fi
