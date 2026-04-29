@@ -489,9 +489,9 @@ export default async function AdminHomePage() {
               <div style={{ marginTop: 6 }}>Realm: {keycloakRealm}</div>
               <div style={{ marginTop: 6 }}>Tenant: {authContext?.tenantId ?? 'platform'}</div>
               <div style={{ marginTop: 6 }}>Roles: {authContext?.roles?.join(', ') || 'none'}</div>
-              <div style={{ marginTop: 12 }}>
-                <a href="/admin/auth/logout">Logout</a>
-              </div>
+              <form action="/admin/auth/logout" method="post" style={{ marginTop: 12 }}>
+                <button type="submit">Logout</button>
+              </form>
             </div>
           </div>
 

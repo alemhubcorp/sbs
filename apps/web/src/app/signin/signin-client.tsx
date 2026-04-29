@@ -180,7 +180,6 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
     <div className={styles.page}>
       <div className={styles.shell}>
         <section className={styles.panel}>
-          {/* ── Tab switcher ────��────────────────────────────── */}
           <div className={styles.tabs}>
             <button
               type="button"
@@ -198,16 +197,14 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
             </button>
           </div>
 
-          {/* ── Banners ────────────���─────────────────────────── */}
           {registeredBanner && <div className={styles.success}>{registeredBanner}</div>}
           {authError(authState) && <div className={styles.error}>{authError(authState)}</div>}
 
-          {/* ══════════════ SIGN IN ══════════════ */}
           {mode === 'signin' && (
             <>
               <div>
-                <h1 className={styles.title}>Welcome back.</h1>
-                <p className={styles.copy}>Sign in to your buyer or supplier account and continue where you left off.</p>
+                <h1 className={styles.title}>Secure access to deals.</h1>
+                <p className={styles.copy}>Sign in to continue requests, quotes, checkout, and escrow-backed orders.</p>
               </div>
 
               {signinError && <div className={styles.error}>{signinError}</div>}
@@ -253,15 +250,13 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
             </>
           )}
 
-          {/* ══════════════ REGISTER ══════════════ */}
           {mode === 'register' && (
             <>
-              {/* Step 1: role selection */}
               {!role && (
                 <>
                   <div>
-                    <h1 className={styles.title}>Join Alemhub.</h1>
-                    <p className={styles.copy}>Choose your role to set up the right workspace.</p>
+                    <h1 className={styles.title}>Create your workspace.</h1>
+                    <p className={styles.copy}>Choose the correct role first. Buyer and supplier access is separated for safer deal flow.</p>
                   </div>
 
                   <div className={styles.roleGrid}>
@@ -299,7 +294,6 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                 </>
               )}
 
-              {/* Step 2: registration form */}
               {role && (
                 <>
                   <div>
@@ -423,7 +417,6 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
           )}
         </section>
 
-        {/* ── Side panel ─────────────────────────────────────────── */}
         <aside className={styles.aside}>
           {mode === 'signin' ? (
             <>
