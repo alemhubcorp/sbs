@@ -28,12 +28,11 @@ fi
 
 if ! grep -q "CLOUDFLARE_TUNNEL_TOKEN=.\+" "$PROJECT_DIR/.env" 2>/dev/null; then
   echo ""
-  echo "⚠️  CLOUDFLARE_TUNNEL_TOKEN не задан в .env!"
+  echo "❌ CLOUDFLARE_TUNNEL_TOKEN не задан в .env!"
   echo "   Получи токен: Cloudflare Zero Trust → Access → Tunnels → [твой туннель] → Configure → Token"
   echo "   Добавь в $PROJECT_DIR/.env:"
   echo "   CLOUDFLARE_TUNNEL_TOKEN=eyJhbGciO..."
-  echo ""
-  echo "   Продолжаю установку, но cloudflared не запустится без токена!"
+  exit 1
 fi
 
 # ── 2. Делаем скрипты исполняемыми ──────────────────────────────────────────

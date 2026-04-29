@@ -30,6 +30,11 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+if ! grep -q '^CLOUDFLARE_TUNNEL_TOKEN=.\+' .env; then
+  log "CLOUDFLARE_TUNNEL_TOKEN is missing in $PROJECT_DIR/.env"
+  exit 1
+fi
+
 log "validating docker compose configuration"
 docker compose config -q
 
