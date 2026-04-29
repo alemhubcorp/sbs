@@ -19,13 +19,12 @@ log() {
 }
 
 restart_stack() {
-  log "⚠️  Перезапуск cloudflared и traefik..."
+  log "⚠️  Перезапуск traefik..."
   cd "$PROJECT_DIR"
-  docker compose restart cloudflared traefik 2>&1 | tee -a "$LOG_FILE" || true
+  docker compose restart traefik 2>&1 | tee -a "$LOG_FILE" || true
   sleep 15
-  # если cloudflared всё ещё упал — поднимаем весь стек
-  if ! docker compose ps cloudflared | grep -q "Up"; then
-    log "🔴 cloudflared не поднялся — перезапускаем весь стек..."
+  if ! docker compose ps traefik | grep -q "Up"; then
+    log "🔴 traefik не поднялся — перезапускаем весь стек..."
     docker compose up -d --remove-orphans 2>&1 | tee -a "$LOG_FILE" || true
   fi
   log "✅ Перезапуск выполнен"
@@ -39,20 +38,14 @@ check_site() {
   echo "$http_code"
 }
 
-check_container() {
-  local name="$1"
-  cd "$PROJECT_DIR"
-  docker compose ps "$name" 2>/dev/null | grep -q "Up"
-}
-
 log "🚀 RuFlo Watchdog запущен. Проект: $PROJECT_DIR. Проверка каждые ${CHECK_INTERVAL}с"
 
 failure_count=0
 
 while true; do
-  # 1. Проверяем cloudflared (главная причина 502)
-  if ! check_container cloudflared; then
-    log "🔴 cloudflared не запущен!"
+  # 1. Проверяем traefik как локальный origin для внешнего cloudflared
+  if ! docker compose ps traefik 2>/dev/null | grep -q "Up"; then
+    log "🔴 traefik не запущен!"
     failure_count=$((failure_count + 1))
   fi
 

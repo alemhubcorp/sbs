@@ -6,21 +6,6 @@ services:
       dockerfile: infra/docker/node-prod/Dockerfile
     profiles: ["build"]
 
-  cloudflared:
-    image: cloudflare/cloudflared:2026.4.0
-    command:
-      - tunnel
-      - --no-autoupdate
-      - run
-      - --token
-      - ${CLOUDFLARE_TUNNEL_TOKEN}
-    env_file: .env
-    depends_on:
-      traefik:
-        condition: service_started
-    restart: unless-stopped
-    networks: [ruflo]
-
   traefik:
     image: traefik:v3.1
     security_opt:
