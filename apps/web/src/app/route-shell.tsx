@@ -208,7 +208,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
               <Link href="/dashboard" className={styles.btnLight}>
                 Dashboard
               </Link>
-              <Link href="/logout" className={styles.btnDark}>
+              <Link href="/logout" prefetch={false} className={styles.btnDark}>
                 Logout
               </Link>
             </>
