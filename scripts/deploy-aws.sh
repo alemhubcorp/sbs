@@ -30,6 +30,15 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+# Helper: ensure a key=value is present in .env (add if missing, leave if already set)
+ensure_env_key() {
+  local key="$1" default_val="$2"
+  if ! grep -q "^${key}=" .env; then
+    echo "${key}=${default_val}" >> .env
+    log "added ${key} to .env"
+  fi
+}
+
 # Ensure Keycloak bootstrap runs on every deploy so seeded users always exist in Keycloak.
 if grep -q "^KEYCLOAK_BOOTSTRAP_ON_STARTUP=false" .env; then
   sed -i 's/^KEYCLOAK_BOOTSTRAP_ON_STARTUP=false/KEYCLOAK_BOOTSTRAP_ON_STARTUP=true/' .env
@@ -38,6 +47,10 @@ elif ! grep -q "^KEYCLOAK_BOOTSTRAP_ON_STARTUP" .env; then
   echo "KEYCLOAK_BOOTSTRAP_ON_STARTUP=true" >> .env
   log "added KEYCLOAK_BOOTSTRAP_ON_STARTUP=true to .env"
 fi
+
+# Ensure admin credentials exist in .env (these drive both bootstrap service and deploy script)
+ensure_env_key "KEYCLOAK_BOOTSTRAP_ADMIN_EMAIL" "admin@ruflo.local"
+ensure_env_key "KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD" "change-me-admin"
 
 log "validating docker compose configuration"
 docker compose config -q
@@ -119,7 +132,13 @@ else
         -d "{\"realm\":\"${KC_REALM}\",\"enabled\":true,\"loginWithEmailAllowed\":true,\"registrationAllowed\":false,\"resetPasswordAllowed\":true,\"duplicateEmailsAllowed\":false}" \
         >/dev/null || log "realm creation returned error (may already exist)"
     else
-      log "realm ${KC_REALM} exists (status ${REALM_STATUS})"
+      log "realm ${KC_REALM} exists (status ${REALM_STATUS}); ensuring loginWithEmailAllowed=true"
+      curl -fs -X PUT \
+        "${KC_HOST}/admin/realms/${KC_REALM}" \
+        -H "Authorization: Bearer ${TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d "{\"realm\":\"${KC_REALM}\",\"enabled\":true,\"loginWithEmailAllowed\":true,\"registrationAllowed\":false,\"resetPasswordAllowed\":true,\"duplicateEmailsAllowed\":false}" \
+        >/dev/null && log "realm ${KC_REALM} settings updated" || log "realm update returned error"
     fi
 
     # Check if platform-admin user exists
@@ -137,7 +156,29 @@ else
         -d "{\"username\":\"platform-admin\",\"email\":\"${ADMIN_EMAIL}\",\"firstName\":\"Platform\",\"lastName\":\"Admin\",\"enabled\":true,\"emailVerified\":true,\"credentials\":[{\"type\":\"password\",\"value\":\"${ADMIN_PASSWORD}\",\"temporary\":false}]}" \
         >/dev/null && log "platform-admin user created successfully" || log "user creation returned error"
     else
-      log "platform-admin user already exists in Keycloak"
+      log "platform-admin user already exists; ensuring email and password are current"
+      USER_UUID=$(curl -fs \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "${KC_HOST}/admin/realms/${KC_REALM}/users?username=platform-admin&exact=true" \
+        | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+      if [[ -n "$USER_UUID" ]]; then
+        # Update email / enabled
+        curl -fs -X PUT \
+          "${KC_HOST}/admin/realms/${KC_REALM}/users/${USER_UUID}" \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "{\"email\":\"${ADMIN_EMAIL}\",\"firstName\":\"Platform\",\"lastName\":\"Admin\",\"enabled\":true,\"emailVerified\":true}" \
+          >/dev/null && log "platform-admin profile updated" || log "profile update returned error"
+        # Reset password
+        curl -fs -X PUT \
+          "${KC_HOST}/admin/realms/${KC_REALM}/users/${USER_UUID}/reset-password" \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "{\"type\":\"password\",\"value\":\"${ADMIN_PASSWORD}\",\"temporary\":false}" \
+          >/dev/null && log "platform-admin password reset" || log "password reset returned error"
+      else
+        log "could not retrieve user UUID for platform-admin"
+      fi
     fi
 
     # Also ensure ruflo-web-ui client exists (required for password grant login)
@@ -157,7 +198,21 @@ else
         -d "{\"clientId\":\"${WEB_CLIENT_ID}\",\"enabled\":true,\"protocol\":\"openid-connect\",\"publicClient\":false,\"secret\":\"${WEB_CLIENT_SECRET}\",\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"redirectUris\":[\"*\"],\"webOrigins\":[\"*\"]}" \
         >/dev/null && log "client ${WEB_CLIENT_ID} created" || log "client creation returned error"
     else
-      log "client ${WEB_CLIENT_ID} already exists"
+      log "client ${WEB_CLIENT_ID} already exists; ensuring directAccessGrantsEnabled=true"
+      CLIENT_UUID=$(curl -fs \
+        -H "Authorization: Bearer ${TOKEN}" \
+        "${KC_HOST}/admin/realms/${KC_REALM}/clients?clientId=${WEB_CLIENT_ID}&search=false" \
+        | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
+      if [[ -n "$CLIENT_UUID" ]]; then
+        curl -fs -X PUT \
+          "${KC_HOST}/admin/realms/${KC_REALM}/clients/${CLIENT_UUID}" \
+          -H "Authorization: Bearer ${TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "{\"clientId\":\"${WEB_CLIENT_ID}\",\"enabled\":true,\"protocol\":\"openid-connect\",\"publicClient\":false,\"secret\":\"${WEB_CLIENT_SECRET}\",\"standardFlowEnabled\":true,\"directAccessGrantsEnabled\":true,\"redirectUris\":[\"*\"],\"webOrigins\":[\"*\"]}" \
+          >/dev/null && log "client ${WEB_CLIENT_ID} settings updated" || log "client update returned error"
+      else
+        log "could not retrieve client UUID for ${WEB_CLIENT_ID}; skipping update"
+      fi
     fi
   fi
 fi
