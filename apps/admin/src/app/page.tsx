@@ -51,29 +51,31 @@ const sectionGrid = (columns: string): CSSProperties => {
 };
 
 const panelStyle: CSSProperties = {
-  padding: 22,
-  background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 249, 245, 0.96) 100%)',
-  border: '1px solid rgba(148, 163, 184, 0.18)',
-  borderRadius: 26,
-  boxShadow: '0 20px 42px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.65)'
+  padding: 20,
+  background: '#ffffff',
+  border: '1px solid #e2e8f0',
+  borderRadius: 12,
+  boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
 };
 
 const accentPanelStyle: CSSProperties = {
   ...panelStyle,
-  background: 'linear-gradient(180deg, rgba(235, 255, 244, 0.96) 0%, rgba(247, 250, 245, 0.96) 100%)'
+  background: '#f0fdf4',
+  border: '1px solid #bbf7d0'
 };
 
 const tonePanelStyle: CSSProperties = {
   ...panelStyle,
-  background: 'linear-gradient(180deg, rgba(243, 247, 255, 0.96) 0%, rgba(250, 250, 248, 0.98) 100%)'
+  background: '#f8fafc',
+  border: '1px solid #e2e8f0'
 };
 
 const metricValueStyle: CSSProperties = {
-  fontSize: 36,
+  fontSize: 28,
   lineHeight: 1,
-  margin: '10px 0 6px',
+  margin: '8px 0 4px',
   fontWeight: 700,
-  letterSpacing: '-0.05em',
+  letterSpacing: '-0.03em',
   color: '#0f172a'
 };
 
@@ -273,7 +275,7 @@ export default async function AdminHomePage() {
   const logisticsActive = logisticsProviders.filter((provider) => provider.status === 'active').length;
 
   return (
-    <section className="admin-dashboard" style={{ display: 'grid', gap: 24 }}>
+    <section className="admin-dashboard" style={{ display: 'grid', gap: 20, padding: '24px clamp(16px,2.5vw,32px)' }}>
       <style>{`
         .admin-dashboard {
           color: #334155;
@@ -410,143 +412,55 @@ export default async function AdminHomePage() {
         }
       `}</style>
 
-      <section
-        style={{
-          ...tonePanelStyle,
-          padding: 28,
-          overflow: 'hidden',
-          position: 'relative'
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(circle at top right, rgba(16, 185, 129, 0.14), transparent 30%), radial-gradient(circle at left center, rgba(59, 130, 246, 0.08), transparent 28%)',
-            pointerEvents: 'none'
-          }}
-        />
-        <div style={{ position: 'relative', display: 'grid', gap: 22 }}>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 12,
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}
-          >
-            <div style={{ display: 'grid', gap: 12, maxWidth: 820 }}>
-              <div
-                style={eyebrowStyle}
-              >
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: '#10b981',
-                    boxShadow: '0 0 0 5px rgba(16, 185, 129, 0.12)'
-                  }}
-                />
-                Marketplace stability cockpit
-              </div>
-              <div>
-                <h1
-                  style={{
-                    margin: 0,
-                    fontSize: 48,
-                    lineHeight: 0.95,
-                    letterSpacing: '-0.06em',
-                    color: '#0f172a'
-                  }}
-                >
-                  Admin Control Center
-                </h1>
-                <p style={{ margin: '14px 0 0', fontSize: 18, lineHeight: 1.7, color: '#334155' }}>
-                  High-trust oversight for approvals, escrow, and supply orchestration. The surface is styled for
-                  operators, but the underlying workflows remain unchanged.
-                </p>
-              </div>
-            </div>
-            <div
-              style={{
-                minWidth: 260,
-                padding: 20,
-                borderRadius: 24,
-                background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(248, 250, 252, 0.78) 100%)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
-                boxShadow: '0 14px 30px rgba(15, 23, 42, 0.06)'
-              }}
-            >
-              <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#64748b' }}>
-                Operator session
-              </div>
-              <div style={{ marginTop: 10, fontWeight: 700, color: '#0f172a' }}>
-                {authContext?.email ?? authContext?.username ?? 'unknown-user'}
-              </div>
-              <div style={{ marginTop: 6 }}>Realm: {keycloakRealm}</div>
-              <div style={{ marginTop: 6 }}>Tenant: {authContext?.tenantId ?? 'platform'}</div>
-              <div style={{ marginTop: 6 }}>Roles: {authContext?.roles?.join(', ') || 'none'}</div>
-              <form action="/admin/auth/logout" method="post" style={{ marginTop: 12 }}>
-                <button type="submit">Logout</button>
-              </form>
-            </div>
-          </div>
+      {/* ── Page header ───────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#0f172a' }}>Dashboard</h1>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+            Logged in as <strong>{authContext?.email ?? authContext?.username ?? 'admin'}</strong> · Realm: {keycloakRealm}
+          </p>
+        </div>
+        <form action="/admin/auth/logout" method="post">
+          <button type="submit" style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#334155', fontSize: 13, cursor: 'pointer', fontWeight: 500 }}>
+            Logout
+          </button>
+        </form>
+      </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gap: 16,
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'
-            }}
-          >
-            <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <a href="#identity">Identity</a>
-              <a href="#catalog">Catalog</a>
-              <a href="#wholesale">Wholesale</a>
-              <a href="#contracts">Contracts</a>
-              <a href="#payments">Payments</a>
-              <a href="#logistics">Logistics</a>
-              <a href="/admin/partners">Partners</a>
-              <a href="/admin/users">Users</a>
-              <a href="/admin/settings/platform">Platform Settings</a>
-              <a href="/admin/settings/legal">Legal Settings</a>
-              <a href="/admin/settings/smtp">SMTP Settings</a>
-              <a href="#approvals">Approvals</a>
-              <a href="#ops">Notifications / Audit</a>
-            </nav>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-                gap: 10
-              }}
-            >
-              {[
-                { label: 'Roles', value: authContext?.roles?.length ?? 0 },
-                { label: 'Permissions', value: authContext?.permissions?.length ?? 0 },
-                { label: 'Approvals', value: pendingApprovals }
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  style={{
-                    padding: '14px 12px',
-                    borderRadius: 18,
-                    background: 'rgba(255, 255, 255, 0.74)',
-                    border: '1px solid rgba(148, 163, 184, 0.16)',
-                    textAlign: 'center'
-                  }}
-                >
-                  <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#64748b' }}>
-                    {item.label}
-                  </div>
-                  <div style={{ marginTop: 6, fontSize: 24, fontWeight: 700, color: '#0f172a' }}>{item.value}</div>
-                </div>
-              ))}
-            </div>
+      {/* ── KPI cards ─────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 16 }}>
+        {[
+          { icon: '📦', label: 'Active Deals', value: activeDeals, sub: 'Live wholesale deals' },
+          { icon: '💰', label: 'Escrow Held', value: `$${(escrowExposure / 100).toFixed(0)}`, sub: 'In escrow accounts' },
+          { icon: '⚠️', label: 'Pending Approvals', value: pendingApprovals, sub: 'Require action' },
+          { icon: '🚚', label: 'Active Logistics', value: logisticsActive, sub: 'Active providers' },
+          { icon: '⚡', label: 'Open Disputes', value: openDisputes, sub: 'Under review' },
+          { icon: '👤', label: 'Users', value: Array.isArray(dashboard.users) ? dashboard.users.length : 0, sub: 'Registered accounts' }
+        ].map((kpi) => (
+          <div key={kpi.label} style={{ background: '#fff', borderRadius: 12, padding: '16px 18px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 20 }}>{kpi.icon}</div>
+            <div style={{ marginTop: 10, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: '#0f172a' }}>{kpi.value}</div>
+            <div style={{ marginTop: 2, fontSize: 13, fontWeight: 600, color: '#334155' }}>{kpi.label}</div>
+            <div style={{ marginTop: 2, fontSize: 11, color: '#94a3b8' }}>{kpi.sub}</div>
           </div>
+        ))}
+      </div>
+
+      {/* ── Quick nav ─────────────────────────────────────────── */}
+      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 18px', border: '1px solid #e2e8f0' }}>
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94a3b8', marginBottom: 10 }}>Jump to section</div>
+        <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {[
+            ['#identity','Identity'],['#catalog','Catalog'],['#wholesale','Wholesale'],
+            ['#contracts','Contracts'],['#payments','Payments'],['#logistics','Logistics'],
+            ['#approvals','Approvals'],['#ops','Audit Log']
+          ].map(([href, label]) => (
+            <a key={href} href={href} style={{ padding: '5px 12px', borderRadius: 6, background: '#f1f5f9', border: '1px solid #e2e8f0', fontSize: 12, color: '#475569', fontWeight: 500, textDecoration: 'none' }}>{label}</a>
+          ))}
+        </nav>
+      </div>
+
+      <section style={{ display: 'grid', gap: 20 }}>
 
           <div data-grid="triple" data-kpi-grid="true" style={sectionGrid('repeat(4, minmax(0, 1fr))')}>
             <article style={panelStyle}>
@@ -599,7 +513,6 @@ export default async function AdminHomePage() {
           </p>
         </article>
           </div>
-        </div>
       </section>
 
       <div id="identity" data-grid="triple" style={sectionGrid('repeat(4, minmax(0, 1fr))')}>

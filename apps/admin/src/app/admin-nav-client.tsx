@@ -3,232 +3,114 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const navItems = [
-  { label: 'Command Deck', description: 'Executive overview', href: '/', icon: '⌘' },
-  { label: 'Users', description: 'Accounts and roles', href: '/users', icon: '👥' },
-  { label: 'Partners', description: 'Directory and health', href: '/partners', icon: '🤝' },
-  { label: 'Payments', description: 'Transactions and escrow', href: '/payments', icon: '💳' },
-  { label: 'SMTP', description: 'Notification infrastructure', href: '/settings/smtp', icon: '📧' },
-  { label: 'Platform Settings', description: 'Fees, features, and config', href: '/settings/platform', icon: '⚙️' },
-  { label: 'Legal Documents', description: 'Terms, privacy, policies', href: '/settings/legal', icon: '📄' }
+const navGroups = [
+  {
+    label: 'Overview',
+    items: [
+      { label: 'Dashboard', href: '/', icon: '⌘' }
+    ]
+  },
+  {
+    label: 'Management',
+    items: [
+      { label: 'Users', href: '/users', icon: '👥' },
+      { label: 'Partners', href: '/partners', icon: '🤝' },
+      { label: 'Payments', href: '/payments', icon: '💳' }
+    ]
+  },
+  {
+    label: 'Settings',
+    items: [
+      { label: 'SMTP', href: '/settings/smtp', icon: '📧' },
+      { label: 'Platform', href: '/settings/platform', icon: '⚙️' },
+      { label: 'Legal', href: '/settings/legal', icon: '📄' }
+    ]
+  }
 ];
+
+const css = `
+  .asb { flex: 0 0 220px; width: 220px; background: #0f172a; color: #e2e8f0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.07); overflow-y: auto; }
+  .asb-logo { padding: 20px 16px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .asb-logo-badge { display: flex; align-items: center; gap: 8px; }
+  .asb-logo-dot { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#34d399,#059669); display: grid; place-items: center; font-size: 16px; flex-shrink: 0; }
+  .asb-logo-name { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: #f1f5f9; }
+  .asb-logo-sub { font-size: 11px; color: #64748b; }
+  .asb-status { margin: 10px 16px 0; padding: 6px 10px; border-radius: 6px; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.2); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #34d399; display: flex; align-items: center; gap: 6px; }
+  .asb-status-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; box-shadow: 0 0 8px #34d399; flex-shrink: 0; }
+  .asb-nav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .asb-section-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #475569; padding: 10px 8px 4px; }
+  .asb-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; color: #94a3b8; font-size: 13.5px; font-weight: 500; transition: background 120ms, color 120ms; }
+  .asb-link:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
+  .asb-link-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+  .asb-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 10px; }
+  .asb-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#334155,#1e293b); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #94a3b8; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+  .asb-user-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .asb-user-role { font-size: 11px; color: #475569; }
+
+  /* Topbar (mobile only) */
+  .atb { display: none; }
+  .atb-overlay { display: none; }
+
+  @media (max-width: 860px) {
+    .asb { display: none; }
+    .atb {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; height: 56px; background: #0f172a;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 300;
+    }
+    .atb-overlay { display: block; }
+  }
+
+  .atb-ham { display: flex; flex-direction: column; gap: 4px; cursor: pointer; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); }
+  .atb-ham span { width: 20px; height: 2px; background: #e2e8f0; border-radius: 2px; transition: all 180ms ease; display: block; }
+  .atb-ham.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .atb-ham.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+  .atb-ham.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+  .adr {
+    position: fixed; top: 0; left: 0; width: 240px; max-width: 85vw; height: 100vh;
+    background: #0f172a; z-index: 400; display: flex; flex-direction: column;
+    transform: translateX(-110%); transition: transform 260ms cubic-bezier(0.32,0,0.15,1);
+    box-shadow: 8px 0 32px rgba(0,0,0,0.5); overflow-y: auto;
+  }
+  .adr.open { transform: translateX(0); }
+
+  .abk {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 350;
+    opacity: 0; pointer-events: none; transition: opacity 260ms ease; backdrop-filter: blur(2px);
+  }
+  .abk.open { opacity: 1; pointer-events: auto; }
+`;
 
 export function AdminNavClient() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <style>{`
-        .admin-sidebar {
-          flex: 0 0 280px;
-          width: 280px;
-          padding: 28px 24px;
-          background: linear-gradient(180deg, rgba(7,12,24,0.98) 0%, rgba(15,23,42,0.97) 40%, rgba(22,38,58,0.94) 100%);
-          color: #e5eef8;
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
-          border-right: 1px solid rgba(148,163,184,0.14);
-          position: relative;
-          overflow-y: auto;
-        }
-
-        .admin-topbar {
-          display: none;
-        }
-
-        .admin-overlay {
-          display: none;
-        }
-
-        @media (max-width: 860px) {
-          .admin-sidebar {
-            display: none;
-          }
-          .admin-topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 18px;
-            background: rgba(7,12,24,0.98);
-            border-bottom: 1px solid rgba(148,163,184,0.14);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 300;
-          }
-          .admin-overlay {
-            display: block;
-          }
-        }
-
-        .admin-sidebar-drawer {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 300px;
-          max-width: 90vw;
-          height: 100vh;
-          background: linear-gradient(180deg, rgba(7,12,24,0.99) 0%, rgba(15,23,42,0.99) 100%);
-          color: #e5eef8;
-          z-index: 200;
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          padding: 24px 20px;
-          overflow-y: auto;
-          transform: translateX(-110%);
-          transition: transform 280ms cubic-bezier(0.32, 0, 0.15, 1);
-          box-shadow: 8px 0 40px rgba(0,0,0,0.4);
-        }
-
-        .admin-sidebar-drawer.open {
-          transform: translateX(0);
-        }
-
-        .admin-backdrop {
-          position: fixed;
-          inset: 0;
-          background: rgba(0,0,0,0.55);
-          z-index: 150;
-          opacity: 0;
-          pointer-events: none;
-          transition: opacity 280ms ease;
-          backdrop-filter: blur(3px);
-        }
-
-        .admin-backdrop.open {
-          opacity: 1;
-          pointer-events: auto;
-        }
-
-        .hamburger {
-          display: flex;
-          flex-direction: column;
-          gap: 5px;
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 10px;
-          border: 1px solid rgba(148,163,184,0.2);
-          background: rgba(255,255,255,0.06);
-          transition: background 150ms ease;
-        }
-
-        .hamburger:hover {
-          background: rgba(255,255,255,0.12);
-        }
-
-        .hamburger span {
-          width: 22px;
-          height: 2px;
-          background: #e5eef8;
-          border-radius: 2px;
-          transition: all 200ms ease;
-        }
-
-        .hamburger.open span:nth-child(1) {
-          transform: translateY(7px) rotate(45deg);
-        }
-        .hamburger.open span:nth-child(2) {
-          opacity: 0;
-          transform: scaleX(0);
-        }
-        .hamburger.open span:nth-child(3) {
-          transform: translateY(-7px) rotate(-45deg);
-        }
-
-        .nav-item {
-          display: grid;
-          grid-template-columns: 40px 1fr;
-          gap: 12px;
-          align-items: center;
-          padding: 13px 14px;
-          border-radius: 16px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(148,163,184,0.1);
-          text-decoration: none;
-          color: #e5eef8;
-          transition: background 150ms ease, border-color 150ms ease;
-        }
-
-        .nav-item:hover {
-          background: rgba(255,255,255,0.09);
-          border-color: rgba(52,211,153,0.25);
-        }
-
-        .nav-icon {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          display: grid;
-          place-items: center;
-          font-size: 16px;
-          background: rgba(52,211,153,0.1);
-          border: 1px solid rgba(52,211,153,0.15);
-          flex-shrink: 0;
-        }
-
-        .status-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #34d399;
-          box-shadow: 0 0 12px rgba(52,211,153,0.8);
-          flex-shrink: 0;
-        }
-
-        .posture-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
-        }
-
-        .posture-cell {
-          padding: 11px;
-          border-radius: 14px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(148,163,184,0.1);
-        }
-      `}</style>
+      <style>{css}</style>
 
       {/* Desktop sidebar */}
-      <aside className="admin-sidebar">
+      <aside className="asb">
         <SidebarContent />
       </aside>
 
       {/* Mobile topbar */}
-      <div className="admin-topbar">
+      <div className="atb">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="status-dot" />
-          <span style={{ fontWeight: 700, fontSize: 15, color: '#e5eef8', letterSpacing: '-0.02em' }}>Alemhub Admin</span>
+          <div className="asb-logo-dot" style={{ width: 28, height: 28, fontSize: 13 }}>⚡</div>
+          <span style={{ fontWeight: 700, fontSize: 14, color: '#f1f5f9' }}>Alemhub Admin</span>
         </div>
-        <button
-          className={`hamburger${open ? ' open' : ''}`}
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle navigation"
-        >
+        <button className={`atb-ham${open ? ' open' : ''}`} onClick={() => setOpen(!open)} aria-label="Menu">
           <span /><span /><span />
         </button>
       </div>
 
       {/* Mobile backdrop */}
-      <div className={`admin-backdrop admin-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
+      <div className={`abk atb-overlay${open ? ' open' : ''}`} onClick={() => setOpen(false)} />
 
       {/* Mobile drawer */}
-      <div className={`admin-sidebar-drawer admin-overlay${open ? ' open' : ''}`}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div className="status-dot" />
-            <span style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.02em' }}>Alemhub Admin</span>
-          </div>
-          <button
-            onClick={() => setOpen(false)}
-            style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 10, color: '#e5eef8', padding: '6px 10px', cursor: 'pointer', fontSize: 16 }}
-          >
-            ✕
-          </button>
-        </div>
+      <div className={`adr atb-overlay${open ? ' open' : ''}`}>
         <SidebarContent onNavClick={() => setOpen(false)} />
       </div>
     </>
@@ -238,61 +120,44 @@ export function AdminNavClient() {
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   return (
     <>
-      {/* Brand block — only in desktop sidebar */}
-      <div style={{ display: 'grid', gap: 12 }} className="sidebar-brand-block">
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '7px 11px', borderRadius: 999, background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.18)', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', width: 'fit-content' }}>
-          <span className="status-dot" />
+      <div className="asb-logo">
+        <div className="asb-logo-badge">
+          <div className="asb-logo-dot">⚡</div>
+          <div>
+            <div className="asb-logo-name">Alemhub</div>
+            <div className="asb-logo-sub">Admin Panel</div>
+          </div>
+        </div>
+        <div className="asb-status">
+          <span className="asb-status-dot" />
           Stable Control Plane
         </div>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 26, lineHeight: 1, letterSpacing: '-0.05em' }}>Alemhub Admin</h1>
-          <p style={{ margin: '8px 0 0', color: '#94a3b8', fontSize: 13, lineHeight: 1.6 }}>
-            Premium operating console for escrow-sensitive marketplace oversight.
-          </p>
-        </div>
       </div>
 
-      {/* Ops posture */}
-      <div style={{ padding: 16, borderRadius: 20, background: 'rgba(15,23,42,0.3)', border: '1px solid rgba(148,163,184,0.12)' }}>
-        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#64748b', marginBottom: 12 }}>Ops posture</div>
-        <div className="posture-grid">
-          {[
-            { label: 'Escrow', value: 'Protected', ok: true },
-            { label: 'Routing', value: 'Stable', ok: true },
-            { label: 'Auth', value: 'Guarded', ok: true },
-            { label: 'Mode', value: 'Live', ok: true }
-          ].map((item) => (
-            <div key={item.label} className="posture-cell">
-              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#64748b' }}>{item.label}</div>
-              <div style={{ marginTop: 5, fontSize: 14, fontWeight: 600, color: item.ok ? '#34d399' : '#f87171' }}>{item.value}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Navigation */}
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {navItems.map((item) => (
-          <Link key={item.label} href={item.href} className="nav-item" {...(onNavClick ? { onClick: onNavClick } : {})}>
-            <div className="nav-icon">{item.icon}</div>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</div>
-              <div style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>{item.description}</div>
-            </div>
-          </Link>
+      <nav className="asb-nav">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            <div className="asb-section-label">{group.label}</div>
+            {group.items.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="asb-link"
+                {...(onNavClick ? { onClick: onNavClick } : {})}
+              >
+                <span className="asb-link-icon">{item.icon}</span>
+                {item.label}
+              </Link>
+            ))}
+          </div>
         ))}
       </nav>
 
-      {/* Priority block */}
-      <div style={{ marginTop: 'auto', padding: 16, borderRadius: 20, background: 'rgba(148,163,184,0.06)', border: '1px solid rgba(148,163,184,0.12)' }}>
-        <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Priority</div>
-        <p style={{ margin: '8px 0 12px', fontSize: 13, lineHeight: 1.6, color: '#94a3b8' }}>
-          Protect deal completion, validate roles, and keep escrow workflows production-safe.
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {['Escrow integrity', 'Role validation', 'Continuity'].map((tag) => (
-            <span key={tag} style={{ padding: '4px 9px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(148,163,184,0.12)', fontSize: 11, color: '#94a3b8' }}>{tag}</span>
-          ))}
+      <div className="asb-footer">
+        <div className="asb-avatar">A</div>
+        <div>
+          <div className="asb-user-name">Admin</div>
+          <div className="asb-user-role">Platform Operator</div>
         </div>
       </div>
     </>
