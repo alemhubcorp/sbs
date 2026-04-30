@@ -273,7 +273,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* Navigation */}
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {navItems.map((item) => (
-          <Link key={item.label} href={item.href} className="nav-item" onClick={onNavClick}>
+          <Link key={item.label} href={item.href} className="nav-item" {...(onNavClick ? { onClick: onNavClick } : {})}>
             <div className="nav-icon">{item.icon}</div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{item.label}</div>
