@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { RouteShell } from '../route-shell';
 import { ProductCatalogClient } from '../core-flow-client';
 import { getMarketplaceViewer } from '../../lib/marketplace-viewer';
-import { getCatalogProducts, type CatalogQuery } from '../catalog-data';
+import { getCatalogProducts, getCatalogCategories, type CatalogQuery } from '../catalog-data';
 import styles from '../core-flow.module.css';
 
 function queryValue(value: string | string[] | undefined) {
@@ -31,9 +31,16 @@ export default async function ProductsPage({
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const query = buildQuery(resolvedSearchParams);
-  const { products, error } = await getCatalogProducts(query);
-  const viewer = await getMarketplaceViewer();
-  const categories = Array.from(new Set(products.map((product) => product.category?.slug).filter(Boolean))) as string[];
+  const [{ products, error }, { categories: allCategories }, viewer] = await Promise.all([
+    getCatalogProducts(query),
+    getCatalogCategories(),
+    getMarketplaceViewer()
+  ]);
+  // Use API categories; fall back to slugs derived from products if API returns empty
+  const categories =
+    allCategories.length > 0
+      ? allCategories.map((c) => ({ slug: c.slug, name: c.name }))
+      : Array.from(new Set(products.map((p) => p.category?.slug).filter(Boolean))).map((slug) => ({ slug: slug as string, name: slug as string }));
   const sellers = Array.from(new Set(products.map((product) => product.sellerProfile?.displayName).filter(Boolean))) as string[];
 
   return (
@@ -98,9 +105,9 @@ export default async function ProductsPage({
               <label htmlFor="catalog-category">Category</label>
               <select id="catalog-category" name="category" defaultValue={query.category ?? ''}>
                 <option value="">All categories</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                {categories.map((cat) => (
+                  <option key={cat.slug} value={cat.slug}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
