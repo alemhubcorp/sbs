@@ -277,138 +277,181 @@ export default async function AdminHomePage() {
   return (
     <section className="admin-dashboard" style={{ display: 'grid', gap: 20, padding: '24px clamp(16px,2.5vw,32px)' }}>
       <style>{`
-        .admin-dashboard {
-          color: #334155;
-        }
+        /* ── Base ────────────────────────────────────────────── */
+        .admin-dashboard { color: #334155; font-size: 14px; }
+        .admin-dashboard [id] { scroll-margin-top: 24px; }
+        .admin-dashboard a { color: #166534; text-decoration: none; }
+        .admin-dashboard a:hover { color: #0f172a; }
 
-        .admin-dashboard section[id],
-        .admin-dashboard div[id] {
-          scroll-margin-top: 24px;
-        }
-
-        .admin-dashboard a {
-          color: #0f766e;
-          text-decoration: none;
-        }
-
-        .admin-dashboard a:hover {
+        /* ── Section headings ───────────────────────────────── */
+        .admin-dashboard h2 {
+          margin: 0 0 4px;
+          font-size: 15px;
+          font-weight: 700;
           color: #0f172a;
+          letter-spacing: -0.01em;
         }
-
-        .admin-dashboard nav a {
-          display: inline-flex;
-          align-items: center;
-          min-height: 40px;
-          padding: 0 16px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.84);
-          border: 1px solid rgba(148, 163, 184, 0.18);
-          box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+        .admin-dashboard h3 {
+          margin: 0 0 4px;
+          font-size: 13px;
           font-weight: 600;
+          color: #374151;
         }
 
+        /* ── Section label (uppercase eyebrow) ──────────────── */
+        .admin-dashboard .section-label {
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #94a3b8;
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #f1f5f9;
+        }
+
+        /* ── Cards / articles ───────────────────────────────── */
+        .admin-dashboard article {
+          background: #fff;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        /* ── Forms ──────────────────────────────────────────── */
         .admin-dashboard form {
           display: grid;
-          gap: 10px;
-          padding: 16px;
-          border-radius: 20px;
-          background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(255, 255, 255, 0.72) 100%);
-          border: 1px solid rgba(148, 163, 184, 0.14);
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+          gap: 8px;
+          padding: 12px;
+          border-radius: 8px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          margin-top: 4px;
         }
 
-        .admin-dashboard input,
-        .admin-dashboard select,
-        .admin-dashboard textarea,
-        .admin-dashboard button {
-          width: 100%;
-          box-sizing: border-box;
-          border-radius: 14px;
-          border: 1px solid rgba(148, 163, 184, 0.28);
-          padding: 12px 14px;
-          font: inherit;
-          transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
-        }
-
+        /* ── Inputs / selects / textareas ───────────────────── */
         .admin-dashboard input,
         .admin-dashboard select,
         .admin-dashboard textarea {
-          background: rgba(255, 255, 255, 0.92);
-          color: #0f172a;
-          box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+          width: 100%;
+          box-sizing: border-box;
+          border-radius: 6px;
+          border: 1px solid #d1d5db;
+          padding: 7px 10px;
+          font-size: 13px;
+          font-family: inherit;
+          background: #fff;
+          color: #111827;
+          transition: border-color 150ms, box-shadow 150ms;
+          appearance: auto;
         }
-
+        .admin-dashboard input::placeholder,
+        .admin-dashboard textarea::placeholder { color: #9ca3af; }
         .admin-dashboard input:focus,
         .admin-dashboard select:focus,
         .admin-dashboard textarea:focus {
           outline: none;
-          border-color: rgba(15, 118, 110, 0.5);
-          box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.12);
+          border-color: #16a34a;
+          box-shadow: 0 0 0 3px rgba(22,163,74,0.12);
         }
+        .admin-dashboard textarea { resize: vertical; min-height: 72px; }
+        .admin-dashboard select[multiple] { min-height: 90px; padding: 4px; }
 
+        /* ── Buttons ─────────────────────────────────────────── */
         .admin-dashboard button {
-          background: linear-gradient(135deg, #0f766e 0%, #14532d 100%);
-          color: #f8fafc;
-          border: none;
-          font-weight: 600;
-          cursor: pointer;
-          box-shadow: 0 12px 24px rgba(20, 83, 45, 0.18);
-        }
-
-        .admin-dashboard button:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 14px 30px rgba(20, 83, 45, 0.22);
-        }
-
-        .admin-dashboard pre,
-        .admin-dashboard code {
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-        }
-
-        .admin-dashboard ul {
-          color: #475569;
-          line-height: 1.7;
-        }
-
-        .admin-dashboard li + li {
-          margin-top: 8px;
-        }
-
-        .admin-dashboard h2 {
-          color: #0f172a;
-          letter-spacing: -0.03em;
-        }
-
-        .admin-dashboard h3 {
-          color: #0f172a;
-          letter-spacing: -0.02em;
-        }
-
-        .admin-dashboard article {
-          position: relative;
-          overflow: hidden;
-        }
-
-        .admin-dashboard article::before {
-          content: '';
-          position: absolute;
-          inset: 0 auto auto 0;
           width: 100%;
-          height: 1px;
-          background: linear-gradient(90deg, rgba(15, 118, 110, 0.22), rgba(15, 23, 42, 0));
-          pointer-events: none;
+          box-sizing: border-box;
+          border-radius: 6px;
+          border: none;
+          padding: 8px 14px;
+          font-size: 13px;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+          background: #15803d;
+          color: #fff;
+          transition: background 150ms, box-shadow 150ms;
+        }
+        .admin-dashboard button:hover { background: #166534; }
+        .admin-dashboard button:active { background: #14532d; }
+
+        /* ── Lists ───────────────────────────────────────────── */
+        .admin-dashboard ul {
+          margin: 0;
+          padding-left: 18px;
+          color: #475569;
+          line-height: 1.65;
+          font-size: 13px;
+        }
+        .admin-dashboard li + li { margin-top: 5px; }
+
+        /* ── Quick-nav pills ────────────────────────────────── */
+        .admin-dashboard .quick-nav a {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          border-radius: 5px;
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          font-size: 12px;
+          font-weight: 500;
+          color: #475569;
+        }
+        .admin-dashboard .quick-nav a:hover { background: #e2e8f0; color: #0f172a; }
+
+        /* ── Code / pre ──────────────────────────────────────── */
+        .admin-dashboard pre {
+          margin: 0;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size: 11px;
+          background: #0f172a;
+          color: #94a3b8;
+          border-radius: 6px;
+          padding: 10px;
+          overflow-x: auto;
+          white-space: pre-wrap;
+          word-break: break-all;
+          max-height: 200px;
+          overflow-y: auto;
         }
 
-        .admin-dashboard [data-kpi-grid] article p:last-child,
-        .admin-dashboard [data-kpi-grid] article div:last-child {
-          color: #64748b;
+        /* ── Grid helpers ────────────────────────────────────── */
+        .ad-grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); }
+        .ad-grid-3 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
+        .ad-grid-4 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); }
+
+        /* ── Section block ───────────────────────────────────── */
+        .ad-section { display: grid; gap: 16px; }
+        .ad-section-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+        .ad-section-header h2 { margin: 0; }
+        .ad-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 600;
+          background: #dcfce7;
+          color: #166534;
+          border: 1px solid #bbf7d0;
         }
 
-        @media (max-width: 1100px) {
-          .admin-dashboard [data-grid="triple"],
-          .admin-dashboard [data-grid="double"] {
-            grid-template-columns: 1fr !important;
-          }
+        /* ── Stat in article ─────────────────────────────────── */
+        .ad-stat { font-size: 26px; font-weight: 700; color: #0f172a; letter-spacing: -0.03em; margin: 4px 0; }
+        .ad-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+        .ad-stat-sub { font-size: 12px; color: #64748b; }
+
+        @media (max-width: 860px) {
+          .ad-grid-2, .ad-grid-3, .ad-grid-4 { grid-template-columns: 1fr; }
         }
       `}</style>
 
