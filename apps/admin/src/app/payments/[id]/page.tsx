@@ -64,8 +64,7 @@ export default async function PaymentDetailPage({
 
   try {
     const response = await fetch(`${internalBaseUrl}/api/admin/payments/${id}`, {
-      headers: { authorization: `Bearer ${accessToken}` },
-      cache: 'no-store'
+      headers: { authorization: `Bearer ${accessToken}` }
     });
     if (!response.ok) throw new Error(`Status ${response.status}`);
     payment = (await response.json()) as PaymentDetail;

@@ -38,8 +38,7 @@ export default async function PaymentsReviewPage() {
 
   try {
     const response = await fetch(`${internalBaseUrl}/api/admin/payments/review`, {
-      headers: { authorization: `Bearer ${accessToken}` },
-      cache: 'no-store'
+      headers: { authorization: `Bearer ${accessToken}` }
     });
     if (!response.ok) throw new Error(`Status ${response.status}`);
     const result = (await response.json()) as { items: Payment[] } | Payment[];

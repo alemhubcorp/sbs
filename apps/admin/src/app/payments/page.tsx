@@ -8,8 +8,7 @@ const internalBaseUrl =
 
 async function fetchJson<T>(path: string, accessToken: string): Promise<T> {
   const response = await fetch(`${internalBaseUrl}${path}`, {
-    headers: { authorization: `Bearer ${accessToken}` },
-    cache: 'no-store'
+    headers: { authorization: `Bearer ${accessToken}` }
   });
   if (!response.ok) throw new Error(`${path} → ${response.status}`);
   return (await response.json()) as T;
