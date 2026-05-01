@@ -4,6 +4,11 @@ import { getMarketplaceViewer, getRoleLabel, type MarketplaceRole } from '../lib
 import { getPublicPlatformSettings } from './platform-public-settings';
 import styles from './route-shell.module.css';
 
+// Admin panel is a separate Next.js app served by Traefik at /admin.
+// All admin links MUST be absolute URLs so the browser does a hard navigation
+// through Traefik (not client-side routing via the web app router).
+const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'https://alemhub.sbs/admin';
+
 type RouteCard = {
   tag: string;
   title: string;
@@ -76,13 +81,7 @@ const roleLinks: Record<Exclude<MarketplaceRole, 'guest'>, NavLink[]> = {
   admin: [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'Onboarding', href: '/onboarding' },
-    { label: 'Users', href: '/admin' },
-    { label: 'Partners', href: '/admin/partners' },
-    { label: 'SMTP Settings', href: '/admin/settings/smtp' },
-    { label: 'API Connections', href: '/admin/api-connections' },
-    { label: 'Banks', href: '/admin/api-connections/banks' },
-    { label: 'Payments', href: '/admin/payments' },
-    { label: 'Review', href: '/admin/payments/review' },
+    { label: 'Admin Panel', href: adminUrl },
     { label: 'Buyer payments', href: '/buyer/payments' },
     { label: 'Supplier payouts', href: '/supplier/payouts' },
     { label: 'Products', href: '/products' },
@@ -152,14 +151,7 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
         ...(viewer.role === 'logistics' ? [{ label: 'Logistics', href: '/logistics' }] : []),
         ...(viewer.role === 'customs' ? [{ label: 'Customs', href: '/customs' }] : []),
         ...(viewer.role === 'admin'
-          ? [
-              { label: 'API Connections', href: '/admin/api-connections' },
-              { label: 'Banks', href: '/admin/api-connections/banks' },
-              { label: 'Partners', href: '/admin/partners' },
-              { label: 'SMTP Settings', href: '/admin/settings/smtp' },
-              { label: 'Payments', href: '/admin/payments' },
-              { label: 'Review', href: '/admin/payments/review' }
-            ]
+          ? [{ label: 'Admin Panel', href: adminUrl }]
           : [])
       ]
     : [

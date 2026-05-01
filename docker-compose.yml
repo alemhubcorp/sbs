@@ -41,6 +41,7 @@ services:
       NEXT_PUBLIC_KEYCLOAK_PUBLIC_URL: ${KEYCLOAK_PUBLIC_URL:-https://alemhub.sbs/auth}
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080/auth
       NEXT_PUBLIC_WEB_URL: ${WEB_URL:-https://alemhub.sbs}
+      NEXT_PUBLIC_ADMIN_URL: ${ADMIN_URL:-https://alemhub.sbs/admin}
     ports:
       - "127.0.0.1:${WEB_PORT:-3001}:3001"
     labels:

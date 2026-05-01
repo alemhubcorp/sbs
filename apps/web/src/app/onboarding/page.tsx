@@ -4,6 +4,8 @@ import { RouteShell } from '../route-shell';
 import { RoleCabinetPage } from '../role-cabinet';
 import { ComplianceWorkspaceClient } from '../compliance-workspace-client';
 
+const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'https://alemhub.sbs/admin';
+
 const steps = [
   {
     tag: 'Buyer',
@@ -15,7 +17,7 @@ const steps = [
     tag: 'Supplier',
     title: 'Set up receiving details',
     body: 'Confirm bank details, fulfillment settings, and shipment preferences so quotes can become deals faster.',
-    href: '/admin/api-connections/banks'
+    href: `${adminUrl}/api-connections/banks`
   },
   {
     tag: 'Logistics',
@@ -33,7 +35,7 @@ const steps = [
     tag: 'Admin',
     title: 'Configure the control plane',
     body: 'Set provider keys, routing, invoice data, compliance text, and email settings before the pilot.',
-    href: '/admin/api-connections'
+    href: `${adminUrl}/api-connections`
   }
 ];
 
@@ -73,7 +75,7 @@ export default async function OnboardingPage() {
             <Link href="/signin" style={{ borderRadius: 10, padding: '10px 14px', background: '#eef2ff', color: '#1e3a8a', fontWeight: 700 }}>
               Sign In
             </Link>
-            <Link href="/admin/api-connections" style={{ borderRadius: 10, padding: '10px 14px', background: '#eef2ff', color: '#1e3a8a', fontWeight: 700 }}>
+            <Link href={`${adminUrl}/api-connections`} style={{ borderRadius: 10, padding: '10px 14px', background: '#eef2ff', color: '#1e3a8a', fontWeight: 700 }}>
               Configure payments
             </Link>
           </div>

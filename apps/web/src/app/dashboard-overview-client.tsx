@@ -6,6 +6,8 @@ import type { MarketplaceRole } from '../lib/marketplace-viewer';
 import { formatDateTime, formatMoney, paymentStatusLabel } from './finance-utils';
 import styles from './core-flow.module.css';
 
+const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'https://alemhub.sbs/admin';
+
 type DashboardData = {
   orders: any[];
   deals: any[];
@@ -500,10 +502,10 @@ export function DashboardOverviewClient({ role }: { role: MarketplaceRole }) {
           <div className={styles.sectionTitle}>Payment operations</div>
           <div className={styles.subtle}>Review payments, webhooks, and manual reconciliation from one place.</div>
           <div className={styles.buttonRow} style={{ marginTop: 12 }}>
-            <Link href="/admin/payments" className={styles.buttonSecondary}>
+            <Link href={`${adminUrl}/payments`} className={styles.buttonSecondary}>
               Payment ledger
             </Link>
-            <Link href="/admin/payments/review" className={styles.button}>
+            <Link href={`${adminUrl}/payments/review`} className={styles.button}>
               Review queue
             </Link>
           </div>

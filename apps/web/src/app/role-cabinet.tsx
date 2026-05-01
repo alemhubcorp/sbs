@@ -4,6 +4,8 @@ import { RouteShell } from './route-shell';
 import { getRoleLabel, type MarketplaceViewer } from '../lib/marketplace-viewer';
 import styles from './core-flow.module.css';
 
+const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'https://alemhub.sbs/admin';
+
 type CabinetCard = {
   tag: string;
   title: string;
@@ -93,19 +95,18 @@ function cabinetCopy(viewer: MarketplaceViewer, variant: 'dashboard' | 'admin') 
       title: variant === 'admin' ? 'Manage the marketplace without breaking the trade flow.' : 'Marketplace controls, oversight, and deal monitoring.',
       description:
         'Admins can see the whole marketplace surface area: users, products, deals, and orders. The underlying escrow lifecycle stays untouched.',
-      primary: { label: 'API Connections', href: '/admin/api-connections' },
-      secondary: { label: 'Bank Details', href: '/admin/api-connections/banks' },
+      primary: { label: 'Admin Panel', href: adminUrl },
+      secondary: { label: 'Payments', href: `${adminUrl}/payments` },
       cards: [
         { tag: 'Setup', title: 'Onboarding', body: 'Configure providers, bank details, compliance, and email before the pilot.', href: '/onboarding', foot: 'Open onboarding →' },
-        { tag: 'Users', title: 'Users', body: 'Inspect user and role state from the admin surface.', href: '/admin', foot: 'Open users →' },
-        { tag: 'Partners', title: 'Partners', body: 'Manage logistics, customs, insurance, surveyors, and banks from one admin block.', href: '/admin/partners', foot: 'Open partners →' },
-        { tag: 'SMTP', title: 'SMTP settings', body: 'Configure outbound email and test delivery safely from the control plane.', href: '/admin/settings/smtp', foot: 'Open SMTP settings →' },
-        { tag: 'Connections', title: 'API Connections', body: 'Configure payment providers, routing, and email from the control plane.', href: '/admin/api-connections', foot: 'Open connections →' },
-        { tag: 'Banks', title: 'Banks', body: 'Edit receiving details, invoice prefixes, compliance, and signatures.', href: '/admin/api-connections/banks', foot: 'Open banks →' },
-        { tag: 'Payments', title: 'Payment ops', body: 'Review payments, webhooks, manual proof, and reconciliation.', href: '/admin/payments', foot: 'Open payment ops →' },
-        { tag: 'Review', title: 'Review queue', body: 'Process mismatches, proof uploads, and admin payment decisions.', href: '/admin/payments/review', foot: 'Open review queue →' },
-        { tag: 'Compliance', title: 'KYC approvals', body: 'Review buyer B2B, supplier, logistics, and customs onboarding submissions.', href: '/admin/compliance', foot: 'Open compliance →' },
-        { tag: 'Ledger', title: 'Payment ledger', body: 'Track payment, payout, and release timelines from the ops surface.', href: '/admin/payments', foot: 'Open ledger →' },
+        { tag: 'Users', title: 'Users', body: 'Inspect user and role state from the admin surface.', href: adminUrl, foot: 'Open admin panel →' },
+        { tag: 'Partners', title: 'Partners', body: 'Manage logistics, customs, insurance, surveyors, and banks from one admin block.', href: `${adminUrl}/partners`, foot: 'Open partners →' },
+        { tag: 'SMTP', title: 'SMTP settings', body: 'Configure outbound email and test delivery safely from the control plane.', href: `${adminUrl}/settings/smtp`, foot: 'Open SMTP settings →' },
+        { tag: 'Platform', title: 'Platform settings', body: 'Configure platform settings from the control plane.', href: `${adminUrl}/settings/platform`, foot: 'Open platform →' },
+        { tag: 'Payments', title: 'Payment ops', body: 'Review payments, webhooks, manual proof, and reconciliation.', href: `${adminUrl}/payments`, foot: 'Open payment ops →' },
+        { tag: 'Review', title: 'Review queue', body: 'Process mismatches, proof uploads, and admin payment decisions.', href: `${adminUrl}/payments/review`, foot: 'Open review queue →' },
+        { tag: 'Compliance', title: 'KYC approvals', body: 'Review buyer B2B, supplier, logistics, and customs onboarding submissions.', href: `${adminUrl}/compliance`, foot: 'Open compliance →' },
+        { tag: 'Ledger', title: 'Payment ledger', body: 'Track payment, payout, and release timelines from the ops surface.', href: `${adminUrl}/payments`, foot: 'Open ledger →' },
         { tag: 'Products', title: 'Products', body: 'Review catalog content, seller inventory, and product status.', href: '/products', foot: 'Open products →' },
         { tag: 'Deals', title: 'Deals', body: 'Monitor the escrow lifecycle and current deal state.', href: '/deals', foot: 'Open deals →' },
         { tag: 'Orders', title: 'Orders', body: 'Review order history and post-accept lifecycle surfaces.', href: '/orders', foot: 'Open orders →' },
