@@ -35,3 +35,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: connect track-order to authenticated retail orders with search, status timeline, and detail/payment links
 - commit: pending
 - deploy result: pending
+
+- task: stage 4 logistics/customs/shipping implementation
+- root cause: logistics, customs, and shipping pages showed static route-health content instead of operational data
+- fix: connect logistics/customs to partner assignment boards and shipping to live order tracking
+- commit: pending
+- deploy result: pending
