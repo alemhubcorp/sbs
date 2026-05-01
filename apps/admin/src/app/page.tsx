@@ -106,7 +106,14 @@ const sectionLeadStyle: CSSProperties = {
   lineHeight: 1.7
 };
 
-export default async function AdminHomePage() {
+export default async function AdminHomePage({
+  searchParams
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const errorMsg = typeof params.error === 'string' ? decodeURIComponent(params.error) : null;
+  const successMsg = typeof params.success === 'string' ? decodeURIComponent(params.success.replace(/\+/g, ' ')) : null;
   const keycloakRealm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM ?? 'ruflo';
   const dashboard = await getAdminDashboardData();
   const dashboardExtras = dashboard as typeof dashboard & {
@@ -454,6 +461,25 @@ export default async function AdminHomePage() {
           .ad-grid-2, .ad-grid-3, .ad-grid-4 { grid-template-columns: 1fr; }
         }
       `}</style>
+
+      {/* ── Error / success banner ─────────────────────────────── */}
+      {errorMsg && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#dc2626' }}>Action failed</div>
+            <div style={{ fontSize: 13, color: '#7f1d1d', marginTop: 2 }}>{errorMsg}</div>
+          </div>
+          <a href="/" style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af', textDecoration: 'none', flexShrink: 0, paddingTop: 2 }}>✕ dismiss</a>
+        </div>
+      )}
+      {successMsg && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 16 }}>✅</span>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>{successMsg}</div>
+          <a href="/" style={{ marginLeft: 'auto', fontSize: 12, color: '#9ca3af', textDecoration: 'none', flexShrink: 0 }}>✕</a>
+        </div>
+      )}
 
       {/* ── Page header ───────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -810,8 +836,8 @@ export default async function AdminHomePage() {
           <p style={{ marginTop: 0 }}>Existing categories: {dashboard.categories.length}</p>
           <form action={createCategoryAction} style={{ display: 'grid', gap: 8 }}>
             <input name="name" placeholder="Category name" required />
-            <input name="slug" placeholder="category-slug" required />
-            <input name="description" placeholder="Description" />
+            <input name="slug" placeholder="Leave blank — auto-generated from name" />
+            <input name="description" placeholder="Description (optional)" />
             <select name="parentId" defaultValue="">
               <option value="">No parent</option>
               {categoryOptions.map((category) => (

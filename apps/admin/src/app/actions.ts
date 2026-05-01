@@ -1,16 +1,28 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { requireAccessToken } from '../lib/auth';
 
 const internalBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
+/** Convert any string to a URL-safe slug */
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 async function sendJson<T = unknown>(
   path: string,
   method: 'POST' | 'PUT',
   payload: Record<string, unknown>,
-  revalidatePaths: string[] = ['/admin']
+  revalidatePaths: string[] = ['/']
 ): Promise<T> {
   const accessToken = await requireAccessToken('/');
   const response = await fetch(`${internalBaseUrl}${path}`, {
@@ -30,7 +42,7 @@ async function sendJson<T = unknown>(
     } catch {
       // Keep fallback error text.
     }
-    throw new Error(reason);
+    redirect(`/?error=${encodeURIComponent(reason)}`);
   }
 
   const data = (await response.json()) as T;
@@ -104,10 +116,11 @@ export async function assignRolesAction(formData: FormData) {
 }
 
 export async function createCategoryAction(formData: FormData) {
-  const parentId = String(formData.get('parentId') ?? '').trim();
-  const slug = String(formData.get('slug') ?? '');
-  const name = String(formData.get('name') ?? '');
+  const name = String(formData.get('name') ?? '').trim();
+  const slugRaw = String(formData.get('slug') ?? '').trim();
+  const slug = slugRaw ? slugify(slugRaw) : slugify(name);
   const description = String(formData.get('description') ?? '').trim();
+  const parentId = String(formData.get('parentId') ?? '').trim();
 
   await sendJson('/api/catalog/categories', 'POST', {
     parentId: parentId || undefined,
@@ -115,6 +128,7 @@ export async function createCategoryAction(formData: FormData) {
     name,
     description: description || undefined
   });
+  redirect('/?success=Category+created+successfully');
 }
 
 export async function createSellerProfileAction(formData: FormData) {
