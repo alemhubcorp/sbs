@@ -815,6 +815,50 @@ export async function updateManagedUserStatusAction(formData: FormData) {
   );
 }
 
+export async function adminMarkPaidAction(formData: FormData) {
+  const paymentId = String(formData.get('paymentId') ?? '');
+  const note = String(formData.get('note') ?? '').trim();
+  const proofUrl = String(formData.get('proofUrl') ?? '').trim();
+
+  await sendJson(`/api/admin/payments/${paymentId}/mark-paid`, 'POST', {
+    note: note || undefined,
+    proofUrl: proofUrl || undefined
+  }, ['/payments', '/payments/review']);
+  redirect('/payments?success=Payment+marked+as+paid');
+}
+
+export async function adminRejectPaymentAction(formData: FormData) {
+  const paymentId = String(formData.get('paymentId') ?? '');
+  const reason = String(formData.get('reason') ?? '').trim();
+
+  await sendJson(`/api/admin/payments/${paymentId}/reject`, 'POST', {
+    reason: reason || undefined
+  }, ['/payments', '/payments/review']);
+  redirect('/payments?success=Payment+rejected');
+}
+
+export async function adminRequestCorrectionAction(formData: FormData) {
+  const paymentId = String(formData.get('paymentId') ?? '');
+  const message = String(formData.get('message') ?? '').trim();
+
+  await sendJson(`/api/admin/payments/${paymentId}/request-correction`, 'POST', {
+    message: message || undefined
+  }, ['/payments', '/payments/review']);
+  redirect('/payments?success=Correction+requested');
+}
+
+export async function adminUploadProofAction(formData: FormData) {
+  const paymentId = String(formData.get('paymentId') ?? '');
+  const proofUrl = String(formData.get('proofUrl') ?? '').trim();
+  const note = String(formData.get('note') ?? '').trim();
+
+  await sendJson(`/api/admin/payments/${paymentId}/upload-proof`, 'POST', {
+    proofUrl: proofUrl || undefined,
+    note: note || undefined
+  }, ['/payments', '/payments/review']);
+  redirect(`/payments/${paymentId}?success=Proof+uploaded`);
+}
+
 export async function seedCategoriesAction() {
   const accessToken = await requireAccessToken('/');
   let created = 0;
