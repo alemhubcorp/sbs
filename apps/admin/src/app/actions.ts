@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAccessToken } from '../lib/auth';
+import { CATEGORY_TREE } from '../lib/category-seeds';
 
 const internalBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
@@ -812,4 +813,53 @@ export async function updateManagedUserStatusAction(formData: FormData) {
     },
     ['/admin/users']
   );
+}
+
+export async function seedCategoriesAction() {
+  const accessToken = await requireAccessToken('/');
+  let created = 0;
+  let skipped = 0;
+
+  async function tryCreate(payload: Record<string, unknown>): Promise<{ id: string } | null> {
+    try {
+      const response = await fetch(`${internalBaseUrl}/api/catalog/categories`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        skipped++;
+        return null;
+      }
+      created++;
+      return (await response.json()) as { id: string };
+    } catch {
+      skipped++;
+      return null;
+    }
+  }
+
+  for (const cat of CATEGORY_TREE) {
+    const parent = await tryCreate({
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description
+    });
+    if (cat.subcategories) {
+      for (const sub of cat.subcategories) {
+        await tryCreate({
+          name: sub.name,
+          slug: sub.slug,
+          description: sub.description,
+          parentId: parent?.id
+        });
+      }
+    }
+  }
+
+  revalidatePath('/');
+  redirect(`/?success=Seeded+${created}+categories+(${skipped}+skipped+or+already+exist)`);
 }

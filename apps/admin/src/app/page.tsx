@@ -3,6 +3,7 @@ import {
   approveApprovalAction,
   assignRolesAction,
   createCategoryAction,
+  seedCategoriesAction,
   createMembershipAction,
   createOrgUnitAction,
   createProductAction,
@@ -847,6 +848,12 @@ export default async function AdminHomePage({
               ))}
             </select>
             <button type="submit">Create Category</button>
+          </form>
+          <form action={seedCategoriesAction} style={{ display: 'grid', gap: 8, marginTop: 12, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+            <div style={{ fontSize: 12, color: '#166534', fontWeight: 600 }}>
+              🌱 Bulk seed — inserts the full catalogue tree (27 top-level categories + subcategories). Duplicates are skipped automatically.
+            </div>
+            <button type="submit" style={{ background: '#15803d' }}>Seed Full Category Tree</button>
           </form>
         </article>
 
