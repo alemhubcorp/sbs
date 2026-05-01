@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { RouteShell } from '../../route-shell';
 import { AuctionBidPanel, PreorderReservationPanel, RequestQuoteButton } from '../../core-flow-client';
 import { AddToCartButton } from '../../retail-commerce-client';
+import { WishlistButton } from '../../wishlist-client';
 import { getMarketplaceViewer } from '../../../lib/marketplace-viewer';
 import {
   availabilityLabel,
@@ -74,6 +75,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             <span className={`${styles.status} ${product.availabilityStatus === 'in_stock' ? styles.statusSuccess : styles.statusWarning}`}>
               {availabilityLabel(product.availabilityStatus)}
             </span>
+            <WishlistButton product={product} />
           </div>
           <div className={styles.sectionTitle}>{product.name}</div>
           <div className={styles.inlineMeta}>

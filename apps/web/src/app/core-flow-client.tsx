@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AddToCartButton } from './retail-commerce-client';
+import { WishlistButton } from './wishlist-client';
 import type { CatalogProduct } from './catalog-data';
 import { availabilityLabel, currentProductAmount, formatMoney, isSaleActive } from './catalog-data';
 import styles from './core-flow.module.css';
@@ -575,6 +576,9 @@ export function ProductCatalogClient({ products, viewerRole }: { products: Produ
               <span className={`${styles.status} ${product.availabilityStatus === 'in_stock' ? styles.statusSuccess : styles.statusWarning}`}>
                 {availabilityLabel(product.availabilityStatus)}
               </span>
+            </div>
+            <div className={styles.buttonRow}>
+              <WishlistButton product={product} compact />
             </div>
             <Link href={`/products/${product.slug}`} className={styles.catalogName} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>{product.name}</Link>
             <div className={styles.catalogMeta}>

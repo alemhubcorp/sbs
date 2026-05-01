@@ -1,18 +1,21 @@
 import { RouteShell } from '../route-shell';
+import { getCatalogProducts } from '../catalog-data';
+import { WishlistSummary } from '../wishlist-client';
+import styles from '../core-flow.module.css';
 
-export default function WishlistPage() {
+export default async function WishlistPage() {
+  const { products, error } = await getCatalogProducts({ market: 'all' });
+
   return (
     <RouteShell
       eyebrow="Account"
-      title="Wishlist route."
-      description="The wishlist footer link now points to a real page."
+      title="Wishlist"
+      description="Save products while browsing, return to them later, and move straight into cart or RFQ flows."
       primary={{ label: 'Open Products', href: '/products' }}
       secondary={{ label: 'Open Categories', href: '/categories' }}
-      cards={[
-        { tag: 'Browse', title: 'Save products', body: 'Keep product discovery in the same visible marketplace surface.', href: '/products', foot: 'Browse products →' },
-        { tag: 'Trade', title: 'Open RFQs', body: 'Saved items can move into requests and quotes without dead ends.', href: '/requests', foot: 'Open RFQ board →' },
-        { tag: 'Auth', title: 'Sign in', body: 'Account actions still lead to the real login entry.', href: '/signin', foot: 'Open sign in →' }
-      ]}
-    />
+    >
+      {error ? <div className={styles.errorBox}>{error}</div> : null}
+      <WishlistSummary products={products} />
+    </RouteShell>
   );
 }

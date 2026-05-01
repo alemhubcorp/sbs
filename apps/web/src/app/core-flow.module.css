@@ -75,6 +75,37 @@
 }
 .catalogAction { color: var(--navy); font-weight: 700; font-size: 13.5px; }
 
+.wishlistButton, .wishlistButtonCompact {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-pill);
+  background: var(--white);
+  color: var(--navy);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+.wishlistButton {
+  min-height: 36px;
+  padding: 0 16px;
+}
+.wishlistButtonCompact {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
+.wishlistButton:hover, .wishlistButtonCompact:hover {
+  border-color: var(--teal-border);
+  background: var(--teal-light);
+  transform: translateY(-1px);
+}
+.wishlistButtonActive {
+  border-color: var(--teal);
+  background: var(--teal-light);
+  color: var(--teal);
+}
+
 /* ── Section wrapper card ─────────────────────────────────── */
 .sectionCard {
   background: var(--white);

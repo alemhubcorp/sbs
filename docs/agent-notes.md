@@ -23,3 +23,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: add a client shell control with working mobile drawer plus persisted language/currency preferences
 - commit: pending
 - deploy result: pending
+
+- task: stage 2 wishlist implementation
+- root cause: wishlist was a placeholder route with no save/remove/list behavior
+- fix: add browser-persisted product wishlist controls on catalog/detail pages and a working saved-products page
+- commit: pending
+- deploy result: pending
