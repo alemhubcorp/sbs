@@ -56,7 +56,7 @@ log "validating docker compose configuration"
 docker compose config -q
 
 log "building production images"
-docker compose build node-prod-base keycloak
+docker compose build --no-cache node-prod-base keycloak
 
 log "starting updated stack"
 docker compose up -d --remove-orphans
