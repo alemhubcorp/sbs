@@ -15,7 +15,8 @@ const navGroups = [
     items: [
       { label: 'Users', href: '/users', icon: '👥' },
       { label: 'Partners', href: '/partners', icon: '🤝' },
-      { label: 'Payments', href: '/payments', icon: '💳' }
+      { label: 'Payments', href: '/payments', icon: '💳' },
+      { label: 'API Connections', href: '/api-connections', icon: '🔌' }
     ]
   },
   {
