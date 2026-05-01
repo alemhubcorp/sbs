@@ -544,13 +544,6 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
   }>(null);
   const [acceptedCheckoutConsents, setAcceptedCheckoutConsents] = useState<Record<string, boolean>>({});
   const [paymentMethod, setPaymentMethod] = useState<RetailPaymentRecord['method']>('card');
-  const [cardForm, setCardForm] = useState({
-    cardholderName: '',
-    cardNumber: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvc: ''
-  });
   const [address, setAddress] = useState({
     name: '',
     line1: '',
@@ -675,14 +668,6 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
 
     const paymentRecordMethod = orderState.data.paymentRecords?.[0]?.method ?? paymentMethod;
 
-    if (
-      paymentRecordMethod === 'card' &&
-      (!cardForm.cardholderName || !cardForm.cardNumber || !cardForm.expiryMonth || !cardForm.expiryYear || !cardForm.cvc)
-    ) {
-      setError('Complete the card form before submitting payment.');
-      return;
-    }
-
     setSuccess(null);
     setError(null);
 
@@ -691,8 +676,9 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
         method: 'POST',
         body: JSON.stringify({
           note:
-            paymentRecordMethod === 'card' ? 'Buyer submitted card payment from the checkout flow.' : 'Buyer submitted payment from the checkout flow.',
-          ...(paymentRecordMethod === 'card' ? { card: cardForm } : {})
+            paymentRecordMethod === 'card'
+              ? 'Buyer confirmed hosted card checkout completion from the checkout flow.'
+              : 'Buyer submitted payment from the checkout flow.'
         })
       });
       setSuccess('Payment submitted. Awaiting confirmation.');
@@ -811,7 +797,7 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
                 </div>
                 <div className={styles.subtle}>
                   {paymentMethod === 'card'
-                    ? 'Card checkout will create an Airwallex-ready payment session with masked card submission.'
+                    ? 'Card checkout creates a hosted provider payment link. Card numbers and CVV are not collected by Alemhub.'
                     : paymentMethod === 'qr'
                       ? 'QR payment will create scan-ready instructions and a payment reference.'
                       : paymentMethod === 'bank_transfer'
@@ -821,55 +807,8 @@ export function RetailCheckoutBoard({ viewerRole }: { viewerRole: MarketplaceRol
                         : 'Manual payment will wait for admin or supplier confirmation.'}
                 </div>
                 {paymentMethod === 'card' ? (
-                  <div className={styles.fieldGrid}>
-                    <div className={styles.field}>
-                      <label htmlFor="cardholder-name">Cardholder name</label>
-                      <input
-                        id="cardholder-name"
-                        value={cardForm.cardholderName}
-                        onChange={(event) => setCardForm((current) => ({ ...current, cardholderName: event.target.value }))}
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="card-number">Card number</label>
-                      <input
-                        id="card-number"
-                        inputMode="numeric"
-                        value={cardForm.cardNumber}
-                        onChange={(event) => setCardForm((current) => ({ ...current, cardNumber: event.target.value }))}
-                        placeholder="4111 1111 1111 1111"
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="card-expiry-month">Expiry month</label>
-                      <input
-                        id="card-expiry-month"
-                        inputMode="numeric"
-                        value={cardForm.expiryMonth}
-                        onChange={(event) => setCardForm((current) => ({ ...current, expiryMonth: event.target.value }))}
-                        placeholder="12"
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="card-expiry-year">Expiry year</label>
-                      <input
-                        id="card-expiry-year"
-                        inputMode="numeric"
-                        value={cardForm.expiryYear}
-                        onChange={(event) => setCardForm((current) => ({ ...current, expiryYear: event.target.value }))}
-                        placeholder="2028"
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label htmlFor="card-cvc">CVC</label>
-                      <input
-                        id="card-cvc"
-                        inputMode="numeric"
-                        value={cardForm.cvc}
-                        onChange={(event) => setCardForm((current) => ({ ...current, cvc: event.target.value }))}
-                        placeholder="123"
-                      />
-                    </div>
+                  <div className={styles.successBox}>
+                    After placing the order, open the hosted card checkout link from the payment instructions and confirm completion here.
                   </div>
                 ) : null}
               </div>

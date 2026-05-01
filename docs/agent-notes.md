@@ -47,3 +47,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: replace invalid nested rule with a valid one-column card grid media rule
 - commit: pending
 - deploy result: pending
+
+- task: stage 6 payment UI safety
+- root cause: card payment UI collected raw card number/CVV instead of using the existing hosted provider instruction flow
+- fix: keep card as a working payment method, but route users to hosted checkout instructions and confirm completion without sending PAN/CVV through Alemhub
+- commit: pending
+- deploy result: pending

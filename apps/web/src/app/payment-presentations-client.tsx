@@ -476,12 +476,6 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
     error: null
   });
   const [method, setMethod] = useState<RetailPaymentRecord['method']>('card');
-  const [card, setCard] = useState({
-    cardNumber: '',
-    expiry: '',
-    cvv: '',
-    cardholderName: ''
-  });
   const [loadingAction, setLoadingAction] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [cardError, setCardError] = useState<string | null>(null);
@@ -538,49 +532,15 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
     try {
       const paymentProviderForMethod = method === 'card' || method === 'qr' ? 'airwallex' : 'internal_manual';
 
-      if (method === 'card') {
-        const cleanedCardNumber = card.cardNumber.replace(/\s+/g, '');
-
-        if (!cleanedCardNumber || cleanedCardNumber.length < 12) {
-          throw new Error('Enter a valid card number.');
-        }
-
-        if (!card.expiry.trim()) {
-          throw new Error('Enter a card expiry date.');
-        }
-
-        if (!card.cvv.trim()) {
-          throw new Error('Enter the CVV.');
-        }
-
-        if (!card.cardholderName.trim()) {
-          throw new Error('Enter the cardholder name.');
-        }
-      }
-
-      const [rawExpiryMonth, rawExpiryYear] = card.expiry.split('/').map((value) => value.trim());
-      const normalizedExpiryMonth = rawExpiryMonth ? rawExpiryMonth.padStart(2, '0') : '';
-      const normalizedExpiryYear = rawExpiryYear
-        ? (rawExpiryYear.length === 2 ? `20${rawExpiryYear}` : rawExpiryYear)
-        : '';
-
       await retailJson<RetailOrder>(`orders/${orderId}/pay`, {
         method: 'POST',
         body: JSON.stringify({
           method,
           paymentProvider: paymentProviderForMethod,
-          note: `Payment submitted from UI via ${method}.`,
-          ...(method === 'card'
-            ? {
-                card: {
-                  cardholderName: card.cardholderName.trim(),
-                  cardNumber: card.cardNumber.replace(/\s+/g, ''),
-                  expiryMonth: normalizedExpiryMonth,
-                  expiryYear: normalizedExpiryYear,
-                  cvc: card.cvv.trim()
-                }
-              }
-            : {})
+          note:
+            method === 'card'
+              ? 'Buyer confirmed hosted card checkout completion from the payment page.'
+              : `Payment submitted from UI via ${method}.`
         })
       });
       setSuccess('Payment submitted. Awaiting confirmation.');
@@ -607,6 +567,7 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
   const order = state.data;
   const payment = order?.paymentRecords?.[0] ?? null;
   const instructionRows = instructionEntries(payment);
+  const hostedPaymentLink = instructionRows.find((row) => row.label === 'paymentLink')?.value ?? null;
   const config = configState.data;
   const bank = config?.bank ?? null;
   const selectedProviderKey = config?.routing?.[method] ?? 'internal_manual';
@@ -685,8 +646,8 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
               <p className={styles.helper}>
                 {method === 'card'
                   ? providerFallback
-                    ? 'No live card provider credentials are active. This form still records a controlled card payment attempt.'
-                    : 'Enter card details below and submit to create the payment attempt.'
+                    ? 'No live card provider credentials are active. Hosted card checkout will stay in controlled review mode.'
+                    : 'Open the hosted provider checkout link, complete payment, then confirm submission here.'
                   : method === 'qr'
                     ? 'QR payment will show a reference and scan-ready instructions.'
                   : method === 'bank_transfer'
@@ -704,29 +665,25 @@ export function RetailOrderPaymentBoard({ orderId }: { orderId: string }) {
 
             {method === 'card' ? (
               <section className={styles.card}>
-                <div className={styles.sectionTitle}>Card payment form</div>
-                <div className={styles.formGrid}>
-                  <label className={styles.field}>
-                    <span>Card number</span>
-                    <input value={card.cardNumber} onChange={(event) => setCard((current) => ({ ...current, cardNumber: event.target.value }))} placeholder="4242 4242 4242 4242" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Expiry date</span>
-                    <input value={card.expiry} onChange={(event) => setCard((current) => ({ ...current, expiry: event.target.value }))} placeholder="MM/YY" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>CVV</span>
-                    <input value={card.cvv} onChange={(event) => setCard((current) => ({ ...current, cvv: event.target.value }))} placeholder="123" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Cardholder name</span>
-                    <input value={card.cardholderName} onChange={(event) => setCard((current) => ({ ...current, cardholderName: event.target.value }))} placeholder="Jane Buyer" />
-                  </label>
-                </div>
+                <div className={styles.sectionTitle}>Hosted card checkout</div>
+                <p className={styles.helper}>
+                  Alemhub does not collect card number, expiry, or CVV. Use the provider-hosted checkout link from the active payment record.
+                </p>
+                {hostedPaymentLink ? (
+                  <div className={styles.buttonRow}>
+                    <a href={hostedPaymentLink} target="_blank" rel="noreferrer" className={styles.primaryButton}>
+                      Open hosted checkout
+                    </a>
+                  </div>
+                ) : (
+                  <div className={styles.notice}>
+                    Place checkout or refresh the payment method to generate a hosted card checkout link.
+                  </div>
+                )}
                 {cardError ? <div className={styles.errorBox}>{cardError}</div> : null}
                 <div className={styles.buttonRow}>
                   <button type="button" className={styles.primaryButton} onClick={() => void submit()} disabled={loadingAction}>
-                    {loadingAction ? 'Submitting...' : 'Submit Payment'}
+                    {loadingAction ? 'Submitting...' : 'Confirm hosted payment'}
                   </button>
                 </div>
               </section>
