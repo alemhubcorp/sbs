@@ -121,7 +121,7 @@
   gap: 14px;
 }
 @media (max-width: 900px)  { .cardGrid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px)  { .cardGrid { grid-column: span 1 !important; .cardGrid { grid-template-columns: 1fr; } } }
+@media (max-width: 520px)  { .cardGrid { grid-template-columns: 1fr; } }
 
 .card {
   border: 1px solid var(--gray-200);

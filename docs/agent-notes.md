@@ -41,3 +41,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: connect logistics/customs to partner assignment boards and shipping to live order tracking
 - commit: pending
 - deploy result: pending
+
+- task: stage 5 responsive CSS safety
+- root cause: core-flow mobile card grid CSS contained a nested selector inside a rule, making the responsive declaration invalid
+- fix: replace invalid nested rule with a valid one-column card grid media rule
+- commit: pending
+- deploy result: pending
