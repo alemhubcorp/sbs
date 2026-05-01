@@ -38,13 +38,6 @@ http:
       service: auth
       priority: 100
 
-    web-admin-extensions-http:
-      rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
-      entryPoints: [web]
-      middlewares: [forwarded-https]
-      service: web
-      priority: 85
-
     admin-http:
       rule: "Host(`alemhub.sbs`) && PathPrefix(`/admin`)"
       entryPoints: [web]
@@ -74,14 +67,6 @@ http:
       middlewares: [forwarded-https]
       service: auth
       priority: 100
-      tls: {}
-
-    web-admin-extensions:
-      rule: "Host(`alemhub.sbs`) && (PathPrefix(`/admin/api-connections`) || PathPrefix(`/admin/payments`))"
-      entryPoints: [websecure]
-      middlewares: [forwarded-https, security-headers]
-      service: web
-      priority: 85
       tls: {}
 
     admin:
