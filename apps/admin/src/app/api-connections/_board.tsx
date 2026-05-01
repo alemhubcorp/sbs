@@ -149,20 +149,20 @@ function SettingCard({ title, description, settingKey, section, value, fields, o
               <textarea
                 value={String(draft[f.name] ?? '')}
                 placeholder={f.placeholder}
-                onChange={e => setDraft(d => ({ ...d, [f.name]: e.currentTarget.value }))}
+                onChange={e => setDraft(d => ({ ...d, [f.name]: (e.currentTarget as HTMLTextAreaElement).value }))}
                 style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
               />
             ) : f.type === 'checkbox' ? (
               <input
                 type="checkbox"
                 checked={Boolean(draft[f.name])}
-                onChange={e => setDraft(d => ({ ...d, [f.name]: e.currentTarget.checked }))}
+                onChange={e => setDraft(d => ({ ...d, [f.name]: (e.currentTarget as HTMLInputElement).checked }))}
                 style={{ width: 18, height: 18, accentColor: '#3b82f6' }}
               />
             ) : f.type === 'select' ? (
               <select
                 value={String(draft[f.name] ?? '')}
-                onChange={e => setDraft(d => ({ ...d, [f.name]: e.currentTarget.value }))}
+                onChange={e => setDraft(d => ({ ...d, [f.name]: (e.currentTarget as HTMLSelectElement).value }))}
                 style={inputStyle}
               >
                 {f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -172,7 +172,7 @@ function SettingCard({ title, description, settingKey, section, value, fields, o
                 type={f.type === 'password' ? 'password' : f.type === 'number' ? 'number' : 'text'}
                 value={String(draft[f.name] ?? '')}
                 placeholder={f.placeholder}
-                onChange={e => setDraft(d => ({ ...d, [f.name]: e.currentTarget.value }))}
+                onChange={e => setDraft(d => ({ ...d, [f.name]: (e.currentTarget as HTMLInputElement).value }))}
                 style={inputStyle}
               />
             )}
