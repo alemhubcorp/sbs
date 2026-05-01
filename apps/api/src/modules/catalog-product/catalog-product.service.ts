@@ -289,6 +289,10 @@ export class CatalogProductService {
     return this.catalogProductRepository.getSupplierProductById(id, sellerProfile.id);
   }
 
+  listPublicCategories() {
+    return this.catalogProductRepository.listCategories();
+  }
+
   listPublicProducts(query?: unknown) {
     return this.catalogProductRepository.listProducts(false, listProductsQuerySchema.parse(query ?? {}));
   }

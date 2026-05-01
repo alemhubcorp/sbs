@@ -85,6 +85,12 @@ export class CatalogProductController {
     return this.catalogProductService.getSupplierProductById(id, authContext!);
   }
 
+  @Get('public/categories')
+  @Public()
+  listPublicCategories() {
+    return this.catalogProductService.listPublicCategories();
+  }
+
   @Get('public/products')
   @Public()
   listPublicProducts(@Query() query: Record<string, string | undefined>) {

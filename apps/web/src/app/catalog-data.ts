@@ -102,15 +102,9 @@ export type CatalogCategory = {
 
 export async function getCatalogCategories() {
   try {
-    // Try public endpoint first, fall back to standard endpoint
     const response = await fetch(`${internalApiBaseUrl}/api/catalog/public/categories`, { cache: 'no-store' });
     if (response.ok) {
       return { categories: (await response.json()) as CatalogCategory[], error: null };
-    }
-    // Fallback to non-public endpoint (may work without auth for read)
-    const fallback = await fetch(`${internalApiBaseUrl}/api/catalog/categories`, { cache: 'no-store' });
-    if (fallback.ok) {
-      return { categories: (await fallback.json()) as CatalogCategory[], error: null };
     }
     return { categories: [] as CatalogCategory[], error: null };
   } catch {
