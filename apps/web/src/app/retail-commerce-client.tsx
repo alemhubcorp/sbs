@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './core-flow.module.css';
 
 type Product = {
@@ -1134,6 +1134,163 @@ export function RetailOrdersBoard({
             </article>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+export function TrackOrderBoard({ viewerRole }: { viewerRole: MarketplaceRole }) {
+  const [ordersState, setOrdersState] = useState<LoadState<RetailOrder[]>>(loadingState([]));
+  const [query, setQuery] = useState('');
+
+  async function loadOrders() {
+    setOrdersState((current) => ({ ...current, loading: true, error: null }));
+
+    try {
+      const data = await retailJson<RetailOrder[]>('orders');
+      setOrdersState({ loading: false, data, error: null });
+    } catch (requestError) {
+      if (isAuthRedirectError(requestError)) {
+        return;
+      }
+
+      setOrdersState({
+        loading: false,
+        data: [],
+        error: requestError instanceof Error ? requestError.message : 'Unable to load tracked orders.'
+      });
+    }
+  }
+
+  useEffect(() => {
+    if (viewerRole === 'guest') {
+      return;
+    }
+
+    void loadOrders();
+  }, [viewerRole]);
+
+  const filteredOrders = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return ordersState.data;
+    }
+
+    return ordersState.data.filter((order) => {
+      const searchable = [
+        order.id,
+        order.status,
+        order.paymentStatus,
+        order.paymentTransactionId,
+        order.paymentRecords?.[0]?.paymentReference,
+        order.paymentRecords?.[0]?.transactionId,
+        order.supplierProfile?.displayName,
+        order.buyerProfile?.displayName,
+        ...order.items.flatMap((item) => [item.productName, item.productSlug])
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchable.includes(normalizedQuery);
+    });
+  }, [ordersState.data, query]);
+
+  if (viewerRole === 'guest') {
+    return (
+      <div className={styles.sectionCard}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <div className={styles.sectionTitle}>Sign in to track orders.</div>
+            <div className={styles.muted}>Tracking is limited to orders visible to your buyer, supplier, logistics, customs, or admin role.</div>
+          </div>
+          <Link href="/signin?returnTo=/track-order" className={styles.button}>
+            Sign In
+          </Link>
+        </div>
+        <div className={styles.emptyState}>For security, public order lookup is disabled. Use your account to view only permitted orders.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.grid}>
+      <div className={styles.sectionCard}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <div className={styles.sectionTitle}>Track orders</div>
+            <div className={styles.muted}>Search your visible orders by order id, product, payment reference, or status.</div>
+          </div>
+          <button type="button" className={styles.buttonSecondary} onClick={() => void loadOrders()} disabled={ordersState.loading}>
+            {ordersState.loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+
+        <div className={styles.fieldGrid}>
+          <div className={styles.field}>
+            <label htmlFor="track-order-query">Order, product, payment, status</label>
+            <input
+              id="track-order-query"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search orders"
+            />
+          </div>
+        </div>
+
+        {ordersState.error ? <div className={styles.errorBox}>{ordersState.error}</div> : null}
+        {ordersState.loading && !ordersState.data.length ? <div className={styles.emptyState}>Loading orders...</div> : null}
+        {!ordersState.loading && !filteredOrders.length ? <div className={styles.emptyState}>No matching orders found.</div> : null}
+      </div>
+
+      <div className={styles.list}>
+        {filteredOrders.map((order) => (
+          <article className={styles.dealCard} key={order.id}>
+            <div className={styles.dealHead}>
+              <div>
+                <div className={styles.title}>Order {order.id}</div>
+                <div className={styles.inlineMeta}>
+                  <span>Total: {money(order.totalAmountMinor, order.currency)}</span>
+                  <span>Payment: {order.paymentStatus}</span>
+                  <span>Updated: {new Date(order.updatedAt).toLocaleString()}</span>
+                </div>
+              </div>
+              <span className={`${styles.status} ${order.status === 'delivered' || order.status === 'fulfilled' ? styles.statusSuccess : styles.statusWarning}`}>
+                {order.status}
+              </span>
+            </div>
+
+            <div className={styles.inlineMeta}>
+              <span>Buyer: {order.buyerProfile?.displayName ?? order.buyerProfile?.user?.email ?? order.buyerProfileId}</span>
+              <span>Supplier: {order.supplierProfile?.displayName ?? order.supplierProfile?.user?.email ?? 'Unassigned'}</span>
+            </div>
+            <div className={styles.subtle}>Shipping: {addressLabel(order.shippingAddress)}</div>
+            <div className={styles.subtle}>
+              Items: {order.items.map((item) => `${item.productName} x${item.quantity}`).join(', ') || 'No items'}
+            </div>
+
+            <div className={styles.inlineMeta}>
+              <span className={`${styles.status} ${order.status === 'created' ? styles.statusWarning : ''}`}>Created</span>
+              <span className={`${styles.status} ${order.status === 'pending' ? styles.statusWarning : ''}`}>Pending</span>
+              <span className={`${styles.status} ${order.status === 'paid' ? styles.statusSuccess : ''}`}>Paid</span>
+              <span className={`${styles.status} ${order.status === 'shipped' ? styles.statusWarning : ''}`}>Shipped</span>
+              <span className={`${styles.status} ${order.status === 'delivered' || order.status === 'fulfilled' ? styles.statusSuccess : ''}`}>Delivered</span>
+            </div>
+
+            <div className={styles.buttonRow}>
+              <Link href={`/orders/${order.id}`} className={styles.button}>
+                Open Tracking Detail
+              </Link>
+              <Link href={`/orders/${order.id}/payment`} className={styles.buttonSecondary}>
+                Payment Page
+              </Link>
+              <Link href="/shipping" className={styles.buttonSecondary}>
+                Shipping
+              </Link>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   );

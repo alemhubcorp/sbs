@@ -29,3 +29,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: add browser-persisted product wishlist controls on catalog/detail pages and a working saved-products page
 - commit: pending
 - deploy result: pending
+
+- task: stage 3 track order implementation
+- root cause: track-order was a placeholder route and did not read live order data
+- fix: connect track-order to authenticated retail orders with search, status timeline, and detail/payment links
+- commit: pending
+- deploy result: pending

@@ -1,18 +1,19 @@
 import { RouteShell } from '../route-shell';
+import { getMarketplaceViewer } from '../../lib/marketplace-viewer';
+import { TrackOrderBoard } from '../retail-commerce-client';
 
-export default function TrackOrderPage() {
+export default async function TrackOrderPage() {
+  const viewer = await getMarketplaceViewer();
+
   return (
     <RouteShell
       eyebrow="Account"
-      title="Track order route."
-      description="The track order link now lands on an actual page so navigation does not fail."
+      title="Track order"
+      description="Search the orders visible to your role and follow payment, shipping, and delivery status from one place."
       primary={{ label: 'Open Orders', href: '/orders' }}
       secondary={{ label: 'Open Help Center', href: '/help-center' }}
-      cards={[
-        { tag: 'Orders', title: 'Track by contract', body: 'Use the account flow to inspect live order progress.', href: '/orders', foot: 'Open orders →' },
-        { tag: 'Logistics', title: 'Shipping support', body: 'Move from tracking into shipping and logistics pages.', href: '/shipping', foot: 'Open shipping →' },
-        { tag: 'Support', title: 'Contact us', body: 'Support stays in the route graph instead of a dead link.', href: '/contact', foot: 'Contact support →' }
-      ]}
-    />
+    >
+      <TrackOrderBoard viewerRole={viewer.role} />
+    </RouteShell>
   );
 }
