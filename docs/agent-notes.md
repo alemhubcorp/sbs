@@ -1,0 +1,25 @@
+# Agent Notes
+
+Short project memory for recurring fixes and production incidents.
+
+## 2026-04-29
+
+- task: stabilize AWS deploy and production access
+- root cause: Cloudflare DNS was pointing at the wrong tunnel; production traffic was not reaching the active origin path consistently
+- fix: align DNS/tunnel mapping in Cloudflare and document production tunnel invariants
+- commit: `05c07dc` docs: document production cloudflare tunnel invariants
+- deploy result: production domain recovered after tunnel/DNS alignment
+
+- task: stop login session from dropping back to sign-in
+- root cause: logout could be triggered through GET/prefetch paths, which cleared auth cookies and caused redirect back to `/signin`
+- fix: require explicit POST for logout routes, keep GET logout routes non-destructive, refresh auth entry UI
+- commit: `fe6cc97` fix(auth): make logout explicit and refresh auth entry
+- deploy result: pending confirmation from production after deploy
+
+## 2026-05-02
+
+- task: stage 1 external UX hardening
+- root cause: route shell had hidden mobile navigation and static currency/language pills that looked clickable but did nothing
+- fix: add a client shell control with working mobile drawer plus persisted language/currency preferences
+- commit: pending
+- deploy result: pending

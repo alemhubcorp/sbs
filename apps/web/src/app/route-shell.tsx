@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { getMarketplaceViewer, getRoleLabel, type MarketplaceRole } from '../lib/marketplace-viewer';
 import { getPublicPlatformSettings } from './platform-public-settings';
+import { RouteShellControls } from './route-shell-controls';
 import styles from './route-shell.module.css';
 
 // Admin panel is a separate Next.js app served by Traefik at /admin.
@@ -187,35 +188,12 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
             </Link>
           ))}
         </div>
-        <div className={styles.navActions}>
-          <Link href="/notifications" className={styles.navPill} aria-label="Notifications">
-            🔔
-          </Link>
-          <span className={styles.navPill}>🌐 USD</span>
-          <span className={styles.navPill}>EN</span>
-          {roleLabel ? <span className={styles.navPill}>{roleLabel}</span> : null}
-          {viewer.isAuthenticated ? (
-            <>
-              <Link href="/dashboard" className={styles.btnLight}>
-                Dashboard
-              </Link>
-              <form action="/logout" method="post">
-                <button type="submit" className={styles.btnDark}>
-                  Logout
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              <Link href="/signin" className={styles.btnDark}>
-                Sign In
-              </Link>
-              <Link href="/register" className={styles.btnLight}>
-                Register
-              </Link>
-            </>
-          )}
-        </div>
+        <RouteShellControls
+          navLinks={navLinks}
+          accountItems={accountItems}
+          isAuthenticated={viewer.isAuthenticated}
+          roleLabel={roleLabel}
+        />
       </nav>
 
       <section className={styles.hero}>
