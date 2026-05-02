@@ -119,5 +119,5 @@ Short project memory for recurring fixes and production incidents.
 - task: stage 3 close private marketplace API routes
 - root cause: contract-core RFQ, quotes, and deal endpoints were marked `@Public()`, making escrow-adjacent actions depend on manual service checks instead of the global auth/permission guard
 - fix: remove `@Public()` from contract-core marketplace routes and add a static private-route test to block regressions
-- commit: pending
+- commit: `a812233`
 - deploy result: pending
