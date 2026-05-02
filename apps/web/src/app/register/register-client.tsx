@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import styles from './register.module.css';
 
-type RegistrationKind = 'buyer' | 'supplier';
+type RegistrationKind = 'buyer' | 'supplier' | 'logistics' | 'customs';
 
 type Props = {
   kind: RegistrationKind;
@@ -115,7 +115,7 @@ export function RegistrationForm({ kind, returnTo }: Props) {
 
   const requiredConsentSlugs = useMemo(() => {
     const consent = publicSettings?.governance?.consent;
-    return kind === 'supplier' ? consent?.supplierRegistrationDocumentSlugs ?? [] : consent?.registrationDocumentSlugs ?? [];
+    return kind === 'buyer' ? consent?.registrationDocumentSlugs ?? [] : consent?.supplierRegistrationDocumentSlugs ?? [];
   }, [kind, publicSettings]);
 
   const requiredConsentDocs = useMemo(
@@ -139,6 +139,11 @@ export function RegistrationForm({ kind, returnTo }: Props) {
 
     if (!settingsLoaded) {
       setError('Registration requirements are still loading. Please try again in a moment.');
+      return;
+    }
+
+    if (kind !== 'buyer' && !state.companyName.trim()) {
+      setError('Company name is required for business registration.');
       return;
     }
 
@@ -184,12 +189,24 @@ export function RegistrationForm({ kind, returnTo }: Props) {
     <div className={styles.shell}>
       <form className={styles.form} onSubmit={onSubmit}>
         <div className={styles.intro}>
-          <div className={styles.eyebrow}>{kind === 'buyer' ? 'Buyer onboarding' : 'Supplier onboarding'}</div>
-          <h2 className={styles.title}>{kind === 'buyer' ? 'Set up a buyer workspace built for sourcing and escrow.' : 'Set up a supplier workspace built for quotes and payout release.'}</h2>
+          <div className={styles.eyebrow}>{kind === 'buyer' ? 'Buyer onboarding' : kind === 'supplier' ? 'Supplier onboarding' : kind === 'logistics' ? 'Logistics onboarding' : 'Customs onboarding'}</div>
+          <h2 className={styles.title}>
+            {kind === 'buyer'
+              ? 'Set up a buyer workspace built for sourcing and escrow.'
+              : kind === 'supplier'
+                ? 'Set up a supplier workspace built for quotes and payout release.'
+                : kind === 'logistics'
+                  ? 'Set up a logistics cabinet built for shipment assignments.'
+                  : 'Set up a customs broker cabinet built for clearance assignments.'}
+          </h2>
           <p className={styles.copy}>
             {kind === 'buyer'
               ? 'Create a production-ready buyer account with the details needed for requests, checkout, and order tracking.'
-              : 'Create a supplier account with the details needed for RFQ response, deal execution, and payout operations.'}
+              : kind === 'supplier'
+                ? 'Create a supplier account with the details needed for RFQ response, deal execution, and payout operations.'
+                : kind === 'logistics'
+                  ? 'Create a logistics company account for shipment milestones, delivery evidence, and operational assignments.'
+                  : 'Create a customs broker account for clearance assignments, documents, and broker-side updates.'}
           </p>
         </div>
 
@@ -275,13 +292,13 @@ export function RegistrationForm({ kind, returnTo }: Props) {
             </div>
           </label>
           <label className={styles.field}>
-            <span>{kind === 'supplier' ? 'Company name' : 'Company name (optional)'}</span>
+            <span>{kind === 'buyer' ? 'Company name (optional)' : 'Company name'}</span>
             <input
               type="text"
               value={state.companyName}
               onChange={(event) => setState((current) => ({ ...current, companyName: event.target.value }))}
               autoComplete="organization"
-              required={kind === 'supplier'}
+              required={kind !== 'buyer'}
             />
           </label>
         </div>
@@ -318,7 +335,7 @@ export function RegistrationForm({ kind, returnTo }: Props) {
               <Link href="/terms" target="_blank">Terms &amp; Conditions</Link>
               {' and '}
               <Link href="/privacy" target="_blank">Privacy Policy</Link>
-              {kind === 'supplier' ? (
+              {kind !== 'buyer' ? (
                 <>
                   {' and '}
                   <Link href="/seller-policy" target="_blank">Seller Policy</Link>
@@ -330,7 +347,17 @@ export function RegistrationForm({ kind, returnTo }: Props) {
 
         <div className={styles.actions}>
           <button type="submit" className={styles.submit} disabled={submitting || !settingsLoaded}>
-            {!settingsLoaded ? 'Loading...' : submitting ? 'Creating account...' : kind === 'buyer' ? 'Create buyer account' : 'Create supplier account'}
+            {!settingsLoaded
+              ? 'Loading...'
+              : submitting
+                ? 'Creating account...'
+                : kind === 'buyer'
+                  ? 'Create buyer account'
+                  : kind === 'supplier'
+                    ? 'Create supplier account'
+                    : kind === 'logistics'
+                      ? 'Create logistics account'
+                      : 'Create customs account'}
           </button>
           <div className={styles.helper}>After registration you will be redirected to sign in.</div>
         </div>
@@ -339,7 +366,7 @@ export function RegistrationForm({ kind, returnTo }: Props) {
       <aside className={styles.aside}>
         <div className={styles.asideCard}>
           <div className={styles.asideLabel}>What opens next</div>
-          <div className={styles.asideValue}>{kind === 'buyer' ? 'Dashboard' : 'Quotes and payouts'}</div>
+          <div className={styles.asideValue}>{kind === 'buyer' ? 'Dashboard' : kind === 'supplier' ? 'Quotes and payouts' : kind === 'logistics' ? 'Logistics cabinet' : 'Customs cabinet'}</div>
           <div className={styles.asideCopy}>
             {kind === 'buyer'
               ? 'Buyers move into requests, checkout, escrow-backed payments, and order follow-up.'

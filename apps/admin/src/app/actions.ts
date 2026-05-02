@@ -1,5 +1,6 @@
 'use server';
 
+import sharp from 'sharp';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAccessToken } from '../lib/auth';
@@ -681,7 +682,7 @@ function collectIndexedRecords(
   return records.filter((record) => fields.some((field) => typeof record[field] === 'string' && String(record[field]).length > 0));
 }
 
-async function readUploadedImageDataUrl(entry: FormDataEntryValue | null) {
+async function readUploadedLogoWebpDataUrl(entry: FormDataEntryValue | null) {
   if (!(entry instanceof File) || entry.size === 0) {
     return null;
   }
@@ -695,7 +696,15 @@ async function readUploadedImageDataUrl(entry: FormDataEntryValue | null) {
   }
 
   const buffer = Buffer.from(await entry.arrayBuffer());
-  return `data:${entry.type};base64,${buffer.toString('base64')}`;
+  try {
+    const webp = await sharp(buffer)
+      .resize({ width: 512, height: 512, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 86 })
+      .toBuffer();
+    return `data:image/webp;base64,${webp.toString('base64')}`;
+  } catch {
+    throw new Error('Logo file could not be converted to WebP.');
+  }
 }
 
 export async function updateGovernanceSettingsAction(formData: FormData) {
@@ -713,7 +722,7 @@ export async function updateGovernanceSettingsAction(formData: FormData) {
 }
 
 export async function updateBrandingSettingsAction(formData: FormData) {
-  const uploadedLogo = await readUploadedImageDataUrl(formData.get('logoFile'));
+  const uploadedLogo = await readUploadedLogoWebpDataUrl(formData.get('logoFile'));
   const typedLogoUrl = String(formData.get('logoUrl') ?? '').trim();
 
   await sendJson(

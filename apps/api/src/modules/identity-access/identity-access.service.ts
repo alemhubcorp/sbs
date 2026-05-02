@@ -88,7 +88,19 @@ const resetPasswordSchema = z
     }
   });
 
-type PublicRegistrationKind = 'buyer' | 'supplier';
+type PublicRegistrationKind = 'buyer' | 'supplier' | 'logistics' | 'customs';
+
+const publicRegistrationRoleByKind: Record<PublicRegistrationKind, string> = {
+  buyer: 'customer_user',
+  supplier: 'supplier_user',
+  logistics: 'logistics_company',
+  customs: 'customs_broker'
+};
+
+const partnerTypeByRegistrationKind: Partial<Record<PublicRegistrationKind, 'logistics_company' | 'customs_broker'>> = {
+  logistics: 'logistics_company',
+  customs: 'customs_broker'
+};
 
 @Injectable()
 export class IdentityAccessService {
@@ -243,7 +255,7 @@ export class IdentityAccessService {
     const adminUser = process.env.KEYCLOAK_ADMIN_USER ?? 'admin';
     const adminPassword = process.env.KEYCLOAK_ADMIN_PASSWORD ?? 'admin';
     const internalUrl = process.env.KEYCLOAK_INTERNAL_URL ?? 'http://keycloak:8080/auth';
-    const roleCode = accountType === 'buyer' ? 'customer_user' : 'supplier_user';
+    const roleCode = publicRegistrationRoleByKind[accountType];
 
     const [existingByEmail, role] = await Promise.all([
       this.prismaService.client.user.findFirst({
@@ -322,7 +334,7 @@ export class IdentityAccessService {
               displayName
             }
           });
-        } else {
+        } else if (accountType === 'supplier') {
           await tx.sellerProfile.create({
             data: {
               userId: createdUser.id,
@@ -330,6 +342,48 @@ export class IdentityAccessService {
               displayName,
               ...(payload.companyName ? { companyName: payload.companyName } : {}),
               ...(payload.country ? { country: payload.country } : {})
+            }
+          });
+        } else {
+          const partnerType = partnerTypeByRegistrationKind[accountType];
+          if (!partnerType) {
+            throw new ServiceUnavailableException('Partner registration is temporarily unavailable.');
+          }
+
+          const tenant =
+            (await tx.tenant.findFirst({
+              where: { slug: 'ruflo-demo' },
+              select: { id: true }
+            })) ??
+            (await tx.tenant.findFirst({
+              orderBy: { createdAt: 'asc' },
+              select: { id: true }
+            }));
+
+          if (!tenant) {
+            throw new ServiceUnavailableException('Partner registration is temporarily unavailable.');
+          }
+
+          const organization = await tx.organization.create({
+            data: {
+              tenantId: tenant.id,
+              name: displayName,
+              legalName: payload.companyName ?? displayName,
+              partnerType,
+              linkedUserId: createdUser.id,
+              contactName: `${payload.firstName} ${payload.lastName}`.trim(),
+              contactEmail: payload.email,
+              ...(payload.country ? { country: payload.country } : {})
+            }
+          });
+
+          await tx.membership.create({
+            data: {
+              tenantId: tenant.id,
+              userId: createdUser.id,
+              organizationId: organization.id,
+              membershipType: 'admin',
+              status: 'active'
             }
           });
         }
@@ -681,11 +735,11 @@ export class IdentityAccessService {
   }
 
   private parsePublicRegistrationKind(kind: unknown): PublicRegistrationKind {
-    if (kind === 'buyer' || kind === 'supplier') {
+    if (kind === 'buyer' || kind === 'supplier' || kind === 'logistics' || kind === 'customs') {
       return kind;
     }
 
-    throw new BadRequestException('Registration type must be buyer or supplier.');
+    throw new BadRequestException('Registration type must be buyer, supplier, logistics, or customs.');
   }
 
   private parsePublicRegistrationInput(input: unknown, kind: PublicRegistrationKind) {
@@ -695,8 +749,8 @@ export class IdentityAccessService {
       throw new BadRequestException(parsed.error.issues.map((issue) => issue.message).join('; '));
     }
 
-    if (kind === 'supplier' && !parsed.data.companyName?.trim()) {
-      throw new BadRequestException('Company name is required for supplier registration.');
+    if (kind !== 'buyer' && !parsed.data.companyName?.trim()) {
+      throw new BadRequestException('Company name is required for business registration.');
     }
 
     return {

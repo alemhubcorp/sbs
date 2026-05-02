@@ -80,6 +80,10 @@ function readTemplate() {
     normalizedBody = normalizedBody.replace(pattern, replacement);
   }
   normalizedBody = normalizedBody.replace(
+    '<a href="/logistics">Logistics</a>\n            <a href="/pricing">Pricing</a>',
+    '<a href="/logistics">Logistics</a>\n            <a href="/customs">Customs</a>\n            <a href="/pricing">Pricing</a>\n            <a href="/onboarding">Onboarding</a>'
+  );
+  normalizedBody = normalizedBody.replace(
     '<div class="nav-links">',
     '<button type="button" class="mobile-menu-toggle" aria-controls="home-mobile-nav" aria-expanded="false">Menu</button><div class="nav-links" id="home-mobile-nav">'
   );
@@ -101,6 +105,15 @@ function readTemplate() {
   const normalizedStyle = `${style.replace(/body\{/g, `.${styles.templatePage}{`)}
 .${styles.templatePage}{width:100%;max-width:100vw;overflow-x:hidden}
 .${styles.templatePage} img{max-width:100%;height:auto}
+.${styles.templatePage} .nav{height:64px;padding:0 44px;border-bottom:1px solid #e5e7eb}
+.${styles.templatePage} .nav-links a{font-weight:700;color:#667085}
+.${styles.templatePage} .nav-links a:hover{color:#0d1f3c}
+.${styles.templatePage} .search-box{display:none}
+.${styles.templatePage} .nav-r{margin-left:auto}
+.${styles.templatePage} .nav-pill{border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#0d1f3c;font-weight:800}
+.${styles.templatePage} .btn-dark{border-radius:999px;background:#0d1f3c;color:#fff !important;font-weight:800}
+.${styles.templatePage} .btn-secondary{border:1.5px solid #e5e7eb;color:#0d1f3c !important;background:#fff}
+.${styles.templatePage} .btn-secondary:visited{color:#0d1f3c !important}
 .${styles.templatePage} .mobile-menu-toggle,
 .${styles.templatePage} .mobile-menu-close{display:none}
 .${styles.templatePage} .nav-select-pill{display:inline-flex;align-items:center;gap:4px}
@@ -108,6 +121,9 @@ function readTemplate() {
 .${styles.templatePage} .btn-dark,
 .${styles.templatePage} .btn-primary,
 .${styles.templatePage} .btn-teal{color:#fff !important}
+.${styles.templatePage} .btn-teal{border:1px solid rgba(255,255,255,.28)}
+.${styles.templatePage} .btn-ghost{color:#fff !important;border-color:rgba(255,255,255,.52)}
+.${styles.templatePage} .btn-ghost:visited{color:#fff !important}
 .${styles.templatePage} .btn-dark:visited,
 .${styles.templatePage} .btn-primary:visited,
 .${styles.templatePage} .btn-teal:visited{color:#fff !important}

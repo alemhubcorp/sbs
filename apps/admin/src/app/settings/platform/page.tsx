@@ -25,6 +25,22 @@ async function fetchJson<T>(path: string, accessToken: string): Promise<T> {
 }
 
 type SettingRow = { value?: unknown };
+const defaultBrandingSetting: SettingRow = {
+  value: {
+    siteName: 'Alemhub',
+    logoAlt: 'Alemhub logo',
+    markText: 'AH',
+    logoUrl: ''
+  }
+};
+
+async function fetchJsonOrDefault<T>(path: string, accessToken: string, fallback: T): Promise<T> {
+  try {
+    return await fetchJson<T>(path, accessToken);
+  } catch {
+    return fallback;
+  }
+}
 
 function asRecord(value: unknown) {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
@@ -38,7 +54,7 @@ export default async function PlatformSettingsPage() {
   const accessToken = await requireAccessToken('/settings/platform');
   const [governanceSetting, brandingSetting, socialSetting, contactSetting, aiSetting, emailSetting] = await Promise.all([
     fetchJson<SettingRow>('/api/admin/settings/governance:auth', accessToken),
-    fetchJson<SettingRow>('/api/admin/settings/public:branding', accessToken),
+    fetchJsonOrDefault<SettingRow>('/api/admin/settings/public:branding', accessToken, defaultBrandingSetting),
     fetchJson<SettingRow>('/api/admin/settings/public:social-links', accessToken),
     fetchJson<SettingRow>('/api/admin/settings/public:contact-settings', accessToken),
     fetchJson<SettingRow>('/api/admin/settings/ai:content-assistant', accessToken),

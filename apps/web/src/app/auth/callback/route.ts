@@ -19,7 +19,7 @@ function deriveRole(roles?: string[]): string {
 }
 
 function resolvePostLoginPath(returnTo: string, role: string) {
-  const genericTargets = new Set(['/', '/dashboard', '/signin', '/register', '/register/buyer', '/register/supplier']);
+  const genericTargets = new Set(['/', '/dashboard', '/signin', '/register', '/register/buyer', '/register/supplier', '/register/logistics', '/register/customs']);
 
   if (!genericTargets.has(returnTo)) {
     return returnTo;

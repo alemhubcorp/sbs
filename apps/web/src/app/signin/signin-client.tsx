@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import styles from '../auth-forms.module.css';
 
 type Mode = 'signin' | 'register';
-type Role = 'buyer' | 'supplier';
+type Role = 'buyer' | 'supplier' | 'logistics' | 'customs';
 
 type FormState = {
   firstName: string;
@@ -25,6 +25,41 @@ const emptyForm: FormState = {
   confirmPassword: '',
   companyName: '',
   country: '',
+};
+
+const roleCopy: Record<Role, { label: string; title: string; description: string; formTitle: string; formCopy: string; submit: string }> = {
+  buyer: {
+    label: 'Buyer',
+    title: 'Buyer',
+    description: 'Source products, create RFQs, manage checkout, and track escrow-backed orders.',
+    formTitle: 'Create a buyer account.',
+    formCopy: 'Set up your buyer workspace for sourcing, RFQs, and escrow-backed orders.',
+    submit: 'Create buyer account'
+  },
+  supplier: {
+    label: 'Supplier',
+    title: 'Supplier',
+    description: 'Answer RFQs, execute deals, manage shipments, and control payout release.',
+    formTitle: 'Create a supplier account.',
+    formCopy: 'Set up your supplier workspace for RFQ intake, deal execution, and payout operations.',
+    submit: 'Create supplier account'
+  },
+  logistics: {
+    label: 'Logistics company',
+    title: 'Logistics',
+    description: 'Receive shipment assignments, update delivery milestones, and support deal completion.',
+    formTitle: 'Create a logistics company account.',
+    formCopy: 'Set up your logistics cabinet for shipment assignments, status updates, and operating documents.',
+    submit: 'Create logistics account'
+  },
+  customs: {
+    label: 'Customs broker',
+    title: 'Customs',
+    description: 'Manage customs assignments, clearance documents, and broker-side operational updates.',
+    formTitle: 'Create a customs broker account.',
+    formCopy: 'Set up your customs cabinet for clearance assignments, documents, and compliance follow-up.',
+    submit: 'Create customs account'
+  }
 };
 
 type Props = {
@@ -94,7 +129,7 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
 
   const requiredConsentSlugs = useMemo(() => {
     const c = publicSettings?.governance?.consent;
-    return role === 'supplier' ? c?.supplierRegistrationDocumentSlugs ?? [] : c?.registrationDocumentSlugs ?? [];
+    return role === 'buyer' ? c?.registrationDocumentSlugs ?? [] : c?.supplierRegistrationDocumentSlugs ?? [];
   }, [role, publicSettings]);
 
   const requiredConsentDocs = useMemo(
@@ -105,6 +140,8 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
   const registeredBanner = useMemo(() => {
     if (registered === 'buyer') return 'Buyer account created. Sign in to continue.';
     if (registered === 'supplier') return 'Supplier account created. Sign in to continue.';
+    if (registered === 'logistics') return 'Logistics company account created. Sign in to continue.';
+    if (registered === 'customs') return 'Customs broker account created. Sign in to continue.';
     if (registered === 'reset') return 'Password updated. Sign in with your new password.';
     if (registered === 'verification') return 'Account created. Verify your email before signing in.';
     return null;
@@ -267,8 +304,8 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                           <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
                         </svg>
                       </div>
-                      <div className={styles.roleTitle}>Buyer</div>
-                      <div className={styles.roleDesc}>Source products, create RFQs, manage checkout, and track escrow-backed orders.</div>
+                      <div className={styles.roleTitle}>{roleCopy.buyer.label}</div>
+                      <div className={styles.roleDesc}>{roleCopy.buyer.description}</div>
                       <div className={styles.roleArrow}>Get started →</div>
                     </button>
 
@@ -279,8 +316,30 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                           <path d="M16 8h4l3 8H16V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
                         </svg>
                       </div>
-                      <div className={styles.roleTitle}>Supplier</div>
-                      <div className={styles.roleDesc}>Answer RFQs, execute deals, manage payouts and payout release.</div>
+                      <div className={styles.roleTitle}>{roleCopy.supplier.label}</div>
+                      <div className={styles.roleDesc}>{roleCopy.supplier.description}</div>
+                      <div className={styles.roleArrow}>Get started →</div>
+                    </button>
+
+                    <button type="button" className={styles.roleCard} onClick={() => setRole('logistics')}>
+                      <div className={styles.roleIcon}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M3 7h11v10H3z"/><path d="M14 11h4l3 6h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/>
+                        </svg>
+                      </div>
+                      <div className={styles.roleTitle}>{roleCopy.logistics.label}</div>
+                      <div className={styles.roleDesc}>{roleCopy.logistics.description}</div>
+                      <div className={styles.roleArrow}>Get started →</div>
+                    </button>
+
+                    <button type="button" className={styles.roleCard} onClick={() => setRole('customs')}>
+                      <div className={styles.roleIcon}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/>
+                        </svg>
+                      </div>
+                      <div className={styles.roleTitle}>{roleCopy.customs.label}</div>
+                      <div className={styles.roleDesc}>{roleCopy.customs.description}</div>
                       <div className={styles.roleArrow}>Get started →</div>
                     </button>
                   </div>
@@ -300,14 +359,8 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                     <button type="button" className={styles.backBtn} onClick={() => setRole(null)}>
                       ← Change role
                     </button>
-                    <h1 className={styles.title}>
-                      {role === 'buyer' ? 'Create a buyer account.' : 'Create a supplier account.'}
-                    </h1>
-                    <p className={styles.copy}>
-                      {role === 'buyer'
-                        ? 'Set up your buyer workspace for sourcing, RFQs, and escrow-backed orders.'
-                        : 'Set up your supplier workspace for RFQ intake, deal execution, and payout operations.'}
-                    </p>
+                    <h1 className={styles.title}>{roleCopy[role].formTitle}</h1>
+                    <p className={styles.copy}>{roleCopy[role].formCopy}</p>
                   </div>
 
                   {regError && <div className={styles.error}>{regError}</div>}
@@ -336,8 +389,8 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                         <input type="email" autoComplete="email" required {...field('email')} />
                       </label>
                       <label className={styles.fieldWide}>
-                        <span>{role === 'supplier' ? 'Company name' : 'Company name (optional)'}</span>
-                        <input type="text" autoComplete="organization" required={role === 'supplier'} {...field('companyName')} />
+                        <span>{role === 'buyer' ? 'Company name (optional)' : 'Company name'}</span>
+                        <input type="text" autoComplete="organization" required={role !== 'buyer'} {...field('companyName')} />
                       </label>
                     </div>
 
@@ -391,7 +444,7 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                           <Link href="/terms" target="_blank">Terms &amp; Conditions</Link>
                           {' and '}
                           <Link href="/privacy" target="_blank">Privacy Policy</Link>
-                          {role === 'supplier' && (
+                          {role !== 'buyer' && (
                             <>{' and '}<Link href="/seller-policy" target="_blank">Seller Policy</Link></>
                           )}
                         </span>
@@ -400,7 +453,7 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
 
                     <div className={styles.actions}>
                       <button type="submit" className={styles.submit} disabled={regSubmitting || !settingsLoaded}>
-                        {!settingsLoaded ? 'Loading…' : regSubmitting ? 'Creating account…' : role === 'buyer' ? 'Create buyer account' : 'Create supplier account'}
+                        {!settingsLoaded ? 'Loading…' : regSubmitting ? 'Creating account…' : roleCopy[role].submit}
                       </button>
                     </div>
                   </form>
@@ -455,6 +508,28 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
                 <div className={styles.cardCopy}>Required for suppliers. Used in RFQ responses, deal contracts, and payout statements.</div>
               </div>
             </>
+          ) : role === 'logistics' ? (
+            <>
+              <div className={styles.card}>
+                <div className={styles.cardTitle}>What opens next</div>
+                <div className={styles.cardCopy}>Logistics cabinet → shipment assignments, milestones, and delivery evidence.</div>
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardTitle}>Company name</div>
+                <div className={styles.cardCopy}>Required for operational assignment and admin review.</div>
+              </div>
+            </>
+          ) : role === 'customs' ? (
+            <>
+              <div className={styles.card}>
+                <div className={styles.cardTitle}>What opens next</div>
+                <div className={styles.cardCopy}>Customs cabinet → clearance assignments, broker updates, and document follow-up.</div>
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardTitle}>Company name</div>
+                <div className={styles.cardCopy}>Required for customs broker onboarding and assignment visibility.</div>
+              </div>
+            </>
           ) : (
             <>
               <div className={styles.card}>
@@ -464,6 +539,10 @@ export function AuthClient({ returnTo, authState, registered, initialEmail, init
               <div className={styles.card}>
                 <div className={styles.cardTitle}>Supplier</div>
                 <div className={styles.cardCopy}>For manufacturers and distributors responding to inbound demand and managing payouts.</div>
+              </div>
+              <div className={styles.card}>
+                <div className={styles.cardTitle}>Logistics and customs</div>
+                <div className={styles.cardCopy}>For partner companies handling shipment and clearance operations.</div>
               </div>
             </>
           )}

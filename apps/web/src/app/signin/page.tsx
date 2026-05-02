@@ -23,7 +23,10 @@ export default async function SignInPage({ searchParams }: { searchParams?: Sear
   const roleParam = readSingle(resolved?.role);
 
   const initialMode = modeParam === 'register' ? 'register' : 'signin';
-  const initialRole = roleParam === 'buyer' ? 'buyer' : roleParam === 'supplier' ? 'supplier' : null;
+  const initialRole =
+    roleParam === 'buyer' || roleParam === 'supplier' || roleParam === 'logistics' || roleParam === 'customs'
+      ? roleParam
+      : null;
 
   return (
     <AuthClient
