@@ -135,6 +135,15 @@ export class DocumentCoreRepository {
     });
   }
 
+  async deleteDocument(id: string) {
+    await this.getDocumentById(id);
+
+    return this.prismaService.client.document.delete({
+      where: { id },
+      include: this.documentInclude
+    });
+  }
+
   private async ensureDocumentRelations(tenantId?: string, uploadedByUserId?: string) {
     const [tenant, user] = await Promise.all([
       tenantId

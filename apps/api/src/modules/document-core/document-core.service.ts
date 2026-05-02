@@ -85,6 +85,34 @@ export class DocumentCoreService {
     return document;
   }
 
+  async createUploadedFileRecord(input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
+    const parsed = createDocumentSchema.parse(input);
+    const document = await this.documentCoreRepository.createDocument({
+      ...parsed,
+      tenantId: parsed.tenantId ?? authContext.tenantId ?? undefined,
+      uploadedByUserId: authContext.internalUserId ?? parsed.uploadedByUserId
+    });
+
+    await this.auditService.record({
+      module: 'document-core',
+      eventType: 'uploaded-file.created',
+      actorId: auditContext.actorId,
+      tenantId: document.tenantId ?? auditContext.tenantId,
+      correlationId: auditContext.correlationId,
+      subjectType: 'document',
+      subjectId: document.id,
+      payload: {
+        documentType: document.documentType,
+        contentType: document.contentType,
+        name: document.name,
+        storageBucket: document.storageBucket,
+        storageKey: document.storageKey
+      }
+    });
+
+    return document;
+  }
+
   async createDocumentLink(documentId: string, input: unknown, auditContext: RequestAuditContext, authContext: AuthContext) {
     await this.resourceAccessService.ensureDocumentAccess(authContext, documentId);
     const parsed = createDocumentLinkSchema.parse(input);
@@ -139,5 +167,30 @@ export class DocumentCoreService {
     });
 
     return document;
+  }
+
+  async deleteDocument(id: string, auditContext: RequestAuditContext, authContext: AuthContext) {
+    if (!this.resourceAccessService.isPlatformAdmin(authContext)) {
+      await this.resourceAccessService.ensureDocumentAccess(authContext, id);
+    }
+
+    const document = await this.documentCoreRepository.deleteDocument(id);
+
+    await this.auditService.record({
+      module: 'document-core',
+      eventType: 'document.deleted',
+      actorId: auditContext.actorId,
+      tenantId: document.tenantId ?? auditContext.tenantId,
+      correlationId: auditContext.correlationId,
+      subjectType: 'document',
+      subjectId: document.id,
+      payload: {
+        name: document.name,
+        storageBucket: document.storageBucket,
+        storageKey: document.storageKey
+      }
+    });
+
+    return { success: true, id: document.id };
   }
 }

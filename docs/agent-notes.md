@@ -101,3 +101,17 @@ Short project memory for recurring fixes and production incidents.
 - fix: align homepage nav/CTA contrast with the shared public shell, convert uploaded logo files to WebP before storing, use a branding fallback in admin settings, and add logistics/customs registration roles with partner organizations and role-safe post-login redirects
 - commit: pending
 - deploy result: pending
+
+## 2026-05-02
+
+- task: stage 1 typography unification
+- root cause: homepage template used a separate font stack from the public footer/brand copy
+- fix: force the homepage template, buttons, inputs, and footer blocks onto the shared public font variable
+- commit: `46096e4`
+- deploy result: pending
+
+- task: stage 2 uploaded files and WebP image normalization
+- root cause: admin had no central uploaded-file index, product image uploads stored original image formats, and uploaded files could not be filtered or managed from the admin control panel
+- fix: add uploaded file records, image-to-WebP conversion for product/admin uploads, an admin Uploaded Files page with image/document sections, filters, upload, download, copy URL, file info, and delete metadata action
+- commit: pending
+- deploy result: pending

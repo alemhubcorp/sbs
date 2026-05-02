@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { getOptionalAccessToken } from '../../../../lib/auth';
 import { encodeS3Path, ensureBucket, readS3Config, sha256Hex, signedS3Request } from '../../../compliance-documents';
 
@@ -9,24 +10,31 @@ export const runtime = 'nodejs';
 const apiBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
-function fileExtension(name: string, contentType: string) {
-  const lower = name.toLowerCase();
-  const match = lower.match(/\.([a-z0-9]+)$/);
-  if (match?.[1]) {
-    return match[1];
-  }
-
-  if (contentType.includes('png')) return 'png';
-  if (contentType.includes('jpeg')) return 'jpg';
-  if (contentType.includes('jpg')) return 'jpg';
-  if (contentType.includes('webp')) return 'webp';
-  return 'bin';
-}
-
 function baseUrl(request: NextRequest) {
   const protocol = request.headers.get('x-forwarded-proto') ?? 'http';
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? 'localhost:3001';
   return process.env.NEXT_PUBLIC_WEB_URL ?? `${protocol}://${host}`;
+}
+
+function webpFileName(name: string) {
+  const withoutExtension = name.replace(/\.[a-z0-9]+$/i, '').trim();
+  return `${withoutExtension || 'product-image'}.webp`;
+}
+
+async function createUploadRecord(accessToken: string, input: Record<string, unknown>) {
+  try {
+    await fetch(`${apiBaseUrl}/api/documents/uploaded-files`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(input),
+      cache: 'no-store'
+    });
+  } catch {
+    // Upload success must not depend on the admin index record.
+  }
 }
 
 function bearerToken(request: NextRequest) {
@@ -72,16 +80,46 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Only image uploads are supported.' }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const sourceBuffer = Buffer.from(await file.arrayBuffer());
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(
+      await sharp(sourceBuffer)
+        .rotate()
+        .resize({ width: 2400, height: 2400, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 84 })
+        .toBuffer()
+    );
+  } catch {
+    return NextResponse.json({ success: false, error: 'Image could not be converted to WebP.' }, { status: 400 });
+  }
+
   const config = readS3Config();
-  const extension = fileExtension(file.name, file.type || 'application/octet-stream');
-  const storageKey = `products/${productId}/${Date.now()}-${randomUUID()}.${extension}`;
+  const storageKey = `products/${productId}/${Date.now()}-${randomUUID()}.webp`;
   const checksum = sha256Hex(buffer);
 
   await ensureBucket(config);
-  await signedS3Request(config, 'PUT', `${config.bucket}/${encodeS3Path(storageKey)}`, buffer, file.type || 'application/octet-stream', checksum);
+  await signedS3Request(config, 'PUT', `${config.bucket}/${encodeS3Path(storageKey)}`, buffer, 'image/webp', checksum);
 
   const publicUrl = `${baseUrl(request)}/product-media/${storageKey.split('/').map((segment) => encodeURIComponent(segment)).join('/')}`;
+
+  await createUploadRecord(accessToken, {
+    documentType: 'attachment',
+    name: webpFileName(file.name),
+    contentType: 'image/webp',
+    storageBucket: config.bucket,
+    storageKey,
+    sizeBytes: buffer.byteLength,
+    checksum,
+    metadata: {
+      fileGroup: 'image',
+      source: 'product-image-upload',
+      originalName: file.name,
+      originalContentType: file.type || null,
+      productId,
+      publicUrl
+    }
+  });
 
   return NextResponse.json({
     success: true,

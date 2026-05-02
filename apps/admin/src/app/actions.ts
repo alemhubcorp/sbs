@@ -8,6 +8,8 @@ import { CATEGORY_TREE } from '../lib/category-seeds';
 
 const internalBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+const webBaseUrl =
+  process.env.WEB_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_WEB_URL ?? 'http://localhost:3001';
 
 /** Convert any string to a URL-safe slug */
 function slugify(str: string): string {
@@ -22,8 +24,8 @@ function slugify(str: string): string {
 
 async function sendJson<T = unknown>(
   path: string,
-  method: 'POST' | 'PUT',
-  payload: Record<string, unknown>,
+  method: 'POST' | 'PUT' | 'DELETE',
+  payload: Record<string, unknown> | null,
   revalidatePaths: string[] = ['/']
 ): Promise<T> {
   const accessToken = await requireAccessToken('/');
@@ -33,7 +35,7 @@ async function sendJson<T = unknown>(
       'content-type': 'application/json',
       authorization: `Bearer ${accessToken}`
     },
-    body: JSON.stringify(payload)
+    ...(payload ? { body: JSON.stringify(payload) } : {})
   });
 
   if (!response.ok) {
@@ -53,6 +55,51 @@ async function sendJson<T = unknown>(
   }
 
   return data;
+}
+
+export async function uploadAdminFileAction(formData: FormData) {
+  const accessToken = await requireAccessToken('/uploaded-files');
+  const file = formData.get('file');
+
+  if (!(file instanceof File) || file.size === 0) {
+    redirect('/uploaded-files?error=File+is+required');
+  }
+
+  const payload = new FormData();
+  payload.set('file', file);
+
+  const response = await fetch(`${webBaseUrl}/api/uploads/admin-files`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${accessToken}`
+    },
+    body: payload,
+    cache: 'no-store'
+  });
+
+  if (!response.ok) {
+    let reason = `Upload failed with status ${response.status}`;
+    try {
+      const body = (await response.json()) as { error?: string; message?: string };
+      reason = body.error ?? body.message ?? reason;
+    } catch {
+      // Keep fallback error text.
+    }
+    redirect(`/uploaded-files?error=${encodeURIComponent(reason)}`);
+  }
+
+  revalidatePath('/uploaded-files');
+  redirect('/uploaded-files?success=File+uploaded');
+}
+
+export async function deleteUploadedFileAction(formData: FormData) {
+  const documentId = String(formData.get('documentId') ?? '').trim();
+  if (!documentId) {
+    redirect('/uploaded-files?error=Missing+file+id');
+  }
+
+  await sendJson(`/api/documents/${documentId}`, 'DELETE', null, ['/uploaded-files']);
+  redirect('/uploaded-files?success=File+deleted');
 }
 
 export async function approveApprovalAction(formData: FormData) {
