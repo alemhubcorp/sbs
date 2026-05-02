@@ -115,3 +115,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: add uploaded file records, image-to-WebP conversion for product/admin uploads, an admin Uploaded Files page with image/document sections, filters, upload, download, copy URL, file info, and delete metadata action
 - commit: `6557df0`
 - deploy result: pending
+
+- task: stage 3 close private marketplace API routes
+- root cause: contract-core RFQ, quotes, and deal endpoints were marked `@Public()`, making escrow-adjacent actions depend on manual service checks instead of the global auth/permission guard
+- fix: remove `@Public()` from contract-core marketplace routes and add a static private-route test to block regressions
+- commit: pending
+- deploy result: pending

@@ -2,7 +2,6 @@ import { Body, Controller, Get, Header, Inject, Param, Patch, Post, Put, Req } f
 import { CurrentAuthContext } from '../../app/current-auth-context.decorator.js';
 import { extractRequestAuditContext, type ApiRequestLike } from '../../app/auth-context.js';
 import { RequirePermissions } from '../../app/permissions.decorator.js';
-import { Public } from '../../app/public.decorator.js';
 import { ContractCoreService } from './contract-core.service.js';
 
 @Controller(['contracts', 'contract'])
@@ -31,7 +30,6 @@ export class ContractCoreController {
   }
 
   @Post('rfq')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -47,7 +45,6 @@ export class ContractCoreController {
   }
 
   @Get('rfq')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -57,7 +54,6 @@ export class ContractCoreController {
   }
 
   @Get('rfq/supplier-inbox')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -67,7 +63,6 @@ export class ContractCoreController {
   }
 
   @Patch('rfq/:id/status')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -77,19 +72,16 @@ export class ContractCoreController {
   }
 
   @Post('rfq/:id/accept')
-  @Public()
   acceptMockRfq(@Param('id') id: string, @CurrentAuthContext() authContext: ApiRequestLike['authContext']) {
     return this.contractCoreService.updateContractRfqStatus(id, { status: 'accepted' }, authContext);
   }
 
   @Post('rfq/:id/reject')
-  @Public()
   rejectMockRfq(@Param('id') id: string, @CurrentAuthContext() authContext: ApiRequestLike['authContext']) {
     return this.contractCoreService.updateContractRfqStatus(id, { status: 'rejected' }, authContext);
   }
 
   @Post('rfq/:id/quotes')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -104,7 +96,6 @@ export class ContractCoreController {
   }
 
   @Get('quotes')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -114,7 +105,6 @@ export class ContractCoreController {
   }
 
   @Patch('quotes/:id/status')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -124,7 +114,6 @@ export class ContractCoreController {
   }
 
   @Post('quotes/:id/accept')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -134,7 +123,6 @@ export class ContractCoreController {
   }
 
   @Post('quotes/:id/reject')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -144,7 +132,6 @@ export class ContractCoreController {
   }
 
   @Get('deals')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -154,7 +141,6 @@ export class ContractCoreController {
   }
 
   @Get('deals/:id')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -164,7 +150,6 @@ export class ContractCoreController {
   }
 
   @Get('deals/:id/payment')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -174,7 +159,6 @@ export class ContractCoreController {
   }
 
   @Post('deals/:id/fund')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -194,7 +178,6 @@ export class ContractCoreController {
   }
 
   @Post('deals/:id/ship')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -204,7 +187,6 @@ export class ContractCoreController {
   }
 
   @Post('deals/:id/payment-method')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -219,7 +201,6 @@ export class ContractCoreController {
   }
 
   @Post('deals/:id/confirm')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
@@ -229,7 +210,6 @@ export class ContractCoreController {
   }
 
   @Post('deals/:id/dispute')
-  @Public()
   @Header('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
   @Header('Pragma', 'no-cache')
   @Header('Expires', '0')
