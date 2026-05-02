@@ -278,7 +278,6 @@
   margin-top: 22px;
   flex-wrap: wrap;
 }
-:global(.route-shell-menu-locked) { overflow: hidden; }
 
 .btnDark {
   height: 36px;

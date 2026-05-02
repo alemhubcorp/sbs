@@ -59,3 +59,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: use a fixed global body class name for mobile menu scroll lock
 - commit: pending
 - deploy result: pending
+
+- task: deploy build hotfix for route shell CSS module
+- root cause: CSS Modules reject standalone `:global(.route-shell-menu-locked)` selectors because module selectors must include a local class or id
+- fix: remove the global selector and lock mobile menu scroll with client-side `document.body.style.overflow`
+- commit: pending
+- deploy result: pending
