@@ -65,3 +65,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: remove the global selector and lock mobile menu scroll with client-side `document.body.style.overflow`
 - commit: pending
 - deploy result: pending
+
+- task: homepage mobile adaptation without redesign
+- root cause: the homepage uses an imported static HTML template, so stage 1 route-shell controls did not affect `/`; replacing the shell changed the design too much
+- fix: revert the shell replacement, keep the original homepage markup, and add minimal mobile menu/responsive overrides to the existing template
+- commit: pending
+- deploy result: pending

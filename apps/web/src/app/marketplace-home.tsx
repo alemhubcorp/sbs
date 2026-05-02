@@ -79,8 +79,78 @@ function readTemplate() {
   for (const [pattern, replacement] of hrefReplacements) {
     normalizedBody = normalizedBody.replace(pattern, replacement);
   }
+  normalizedBody = normalizedBody.replace(
+    '<div class="nav-links">',
+    '<button type="button" class="mobile-menu-toggle" aria-controls="home-mobile-nav" aria-expanded="false">Menu</button><div class="nav-links" id="home-mobile-nav">'
+  );
+  normalizedBody = normalizedBody.replace(
+    '</nav>',
+    '<button type="button" class="mobile-menu-close" aria-label="Close menu">Close</button></nav>'
+  );
+  normalizedBody = normalizedBody
+    .replace(
+      '<span class="nav-pill">🌐 USD</span>',
+      '<label class="nav-pill nav-select-pill" aria-label="Currency">🌐 <select data-pref-key="alemhub_currency"><option value="USD">USD</option><option value="EUR">EUR</option><option value="KZT">KZT</option></select></label>'
+    )
+    .replace(
+      '<span class="nav-pill">EN</span>',
+      '<label class="nav-pill nav-select-pill" aria-label="Language"><select data-pref-key="alemhub_language"><option value="EN">EN</option><option value="RU">RU</option><option value="KK">KK</option></select></label>'
+    );
 
-  const normalizedStyle = style.replace(/body\{/g, `.${styles.templatePage}{`);
+  const normalizedStyle = `${style.replace(/body\{/g, `.${styles.templatePage}{`)}
+.${styles.templatePage}{width:100%;max-width:100vw;overflow-x:hidden}
+.${styles.templatePage} img{max-width:100%;height:auto}
+.${styles.templatePage} .mobile-menu-toggle,
+.${styles.templatePage} .mobile-menu-close{display:none}
+.${styles.templatePage} .nav-select-pill{display:inline-flex;align-items:center;gap:4px}
+.${styles.templatePage} .nav-select-pill select{border:0;background:transparent;color:inherit;font:inherit;font-weight:700;outline:0}
+@media(max-width:760px){
+  .${styles.templatePage} .nav{padding:0 14px;height:56px;gap:8px}
+  .${styles.templatePage} .logo{font-size:.82rem}
+  .${styles.templatePage} .logo-box{width:26px;height:26px}
+  .${styles.templatePage} .search-box,
+  .${styles.templatePage} .btn-dark{display:none}
+  .${styles.templatePage} .nav-r{gap:5px;margin-left:auto}
+  .${styles.templatePage} .nav-pill{padding:5px 8px;font-size:.72rem}
+  .${styles.templatePage} .mobile-menu-toggle{display:inline-flex;align-items:center;justify-content:center;background:#0d1f3c;color:#fff;border-radius:7px;padding:6px 10px;font-size:.72rem;font-weight:700}
+  .${styles.templatePage} .nav-links{position:absolute;top:56px;left:0;right:0;z-index:120;display:none;background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 14px;box-shadow:0 18px 38px rgba(13,31,60,.12)}
+  .${styles.templatePage} .nav-links a{display:block;padding:11px 8px;border-radius:8px;color:#0d1f3c;font-weight:700}
+  .${styles.templatePage}.mobile-nav-open .nav-links{display:block}
+  .${styles.templatePage}.mobile-nav-open .mobile-menu-close{display:inline-flex;position:absolute;top:9px;right:14px;z-index:130;background:#fff;border:1px solid #e5e7eb;border-radius:7px;padding:6px 10px;color:#0d1f3c;font-size:.72rem;font-weight:700}
+  .${styles.templatePage} .hero,
+  .${styles.templatePage} .section,
+  .${styles.templatePage} .prod-section,
+  .${styles.templatePage} .feat-section,
+  .${styles.templatePage} .testi-section,
+  .${styles.templatePage} .cta,
+  .${styles.templatePage} footer{padding-left:18px;padding-right:18px}
+  .${styles.templatePage} .hero{padding-top:40px;padding-bottom:40px}
+  .${styles.templatePage} .hero h1{font-size:clamp(2.35rem,12vw,3rem);max-width:100%}
+  .${styles.templatePage} .hero-sub{max-width:100%}
+  .${styles.templatePage} .hero-btns,
+  .${styles.templatePage} .cta-btns{display:grid;grid-template-columns:1fr;gap:10px}
+  .${styles.templatePage} .btn-primary,
+  .${styles.templatePage} .btn-secondary,
+  .${styles.templatePage} .btn-teal,
+  .${styles.templatePage} .btn-ghost{justify-content:center;width:100%;text-align:center}
+  .${styles.templatePage} .trust-strip{display:grid;grid-template-columns:1fr;gap:12px}
+  .${styles.templatePage} .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .${styles.templatePage} .stat{padding:18px}
+  .${styles.templatePage} .steps{display:grid;grid-template-columns:1fr}
+  .${styles.templatePage} .step{border-right:none;border-bottom:1px solid #e5e7eb}
+  .${styles.templatePage} .step:last-child{border-bottom:none}
+  .${styles.templatePage} .prod-row-head{align-items:flex-start;gap:12px;flex-direction:column}
+  .${styles.templatePage} .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .${styles.templatePage} .card-img{height:122px}
+  .${styles.templatePage} .feat-grid{grid-template-columns:1fr}
+  .${styles.templatePage} .why-section{padding-left:18px;padding-right:18px}
+  .${styles.templatePage} .footer-grid{grid-template-columns:1fr 1fr;gap:26px}
+}
+@media(max-width:420px){
+  .${styles.templatePage} .pgrid{grid-template-columns:1fr}
+  .${styles.templatePage} .stats{grid-template-columns:1fr}
+  .${styles.templatePage} .footer-grid{grid-template-columns:1fr}
+}`;
 
   return { style: normalizedStyle, body: normalizedBody };
 }
@@ -109,7 +179,13 @@ export function MarketplaceHome({
   return (
     <main className={styles.page}>
       <style dangerouslySetInnerHTML={{ __html: template.style }} />
-      <div className={styles.templatePage} dangerouslySetInnerHTML={{ __html: body }} />
+      <script
+        dangerouslySetInnerHTML={{
+          __html:
+            "document.addEventListener('click',function(event){var target=event.target;if(!(target instanceof Element))return;var root=target.closest('[data-home-template]');if(!root)return;if(target.closest('.mobile-menu-toggle')){root.classList.add('mobile-nav-open');return;}if(target.closest('.mobile-menu-close')||target.closest('.nav-links a')){root.classList.remove('mobile-nav-open');}});document.addEventListener('change',function(event){var target=event.target;if(!(target instanceof HTMLSelectElement))return;var key=target.getAttribute('data-pref-key');if(!key)return;try{localStorage.setItem(key,target.value);document.cookie=key+'='+encodeURIComponent(target.value)+'; Path=/; Max-Age=31536000; SameSite=Lax';}catch(error){}});document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('select[data-pref-key]').forEach(function(select){if(!(select instanceof HTMLSelectElement))return;try{var value=localStorage.getItem(select.getAttribute('data-pref-key')||'');if(value){select.value=value;}}catch(error){}});});"
+        }}
+      />
+      <div className={styles.templatePage} data-home-template dangerouslySetInnerHTML={{ __html: body }} />
     </main>
   );
 }
