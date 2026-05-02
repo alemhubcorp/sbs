@@ -104,6 +104,10 @@ function readTemplate() {
 
   const normalizedStyle = `${style.replace(/body\{/g, `.${styles.templatePage}{`)}
 .${styles.templatePage}{width:100%;max-width:100vw;overflow-x:hidden}
+.${styles.templatePage},
+.${styles.templatePage} input,
+.${styles.templatePage} select,
+.${styles.templatePage} button{font-family:var(--font)}
 .${styles.templatePage} img{max-width:100%;height:auto}
 .${styles.templatePage} .nav{height:64px;padding:0 44px;border-bottom:1px solid #e5e7eb}
 .${styles.templatePage} .nav-links a{font-weight:700;color:#667085}
@@ -124,6 +128,12 @@ function readTemplate() {
 .${styles.templatePage} .btn-teal{border:1px solid rgba(255,255,255,.28)}
 .${styles.templatePage} .btn-ghost{color:#fff !important;border-color:rgba(255,255,255,.52)}
 .${styles.templatePage} .btn-ghost:visited{color:#fff !important}
+.${styles.templatePage} .footer-about,
+.${styles.templatePage} .footer-contact a,
+.${styles.templatePage} .footer-contact span,
+.${styles.templatePage} .fcol h4,
+.${styles.templatePage} .fcol ul li a,
+.${styles.templatePage} .footer-bottom{font-family:var(--font);font-weight:500;letter-spacing:0}
 .${styles.templatePage} .btn-dark:visited,
 .${styles.templatePage} .btn-primary:visited,
 .${styles.templatePage} .btn-teal:visited{color:#fff !important}
