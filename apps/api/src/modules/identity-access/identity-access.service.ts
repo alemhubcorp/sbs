@@ -6,6 +6,7 @@ import { PrismaService } from '../../app/prisma.service.js';
 import { AuditService } from '../audit-observability/audit.service.js';
 import { AdminOpsService } from '../admin-ops/admin-ops.service.js';
 import { EmailService } from '../notifications-core/email.service.js';
+import { NotificationService } from '../notifications-core/notification.service.js';
 import { IdentityAccessRepository } from './identity-access.repository.js';
 
 const createUserSchema = z.object({
@@ -101,7 +102,9 @@ export class IdentityAccessService {
     @Inject(AuditService)
     private readonly auditService: AuditService,
     @Inject(EmailService)
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
+    @Inject(NotificationService)
+    private readonly notificationService: NotificationService
   ) {}
 
   listUsers() {
@@ -386,6 +389,19 @@ export class IdentityAccessService {
         }
       );
 
+      await this.notificationService.emitToPlatformAdmins({
+        type: 'admin.registration.created',
+        title: accountType === 'buyer' ? 'New buyer registration' : 'New supplier registration',
+        message: `${recipientName} registered with ${user.email}.`,
+        entityType: 'user',
+        entityId: user.id,
+        metadata: {
+          accountType,
+          email: user.email,
+          emailVerificationRequired: governance.emailVerificationRequired
+        }
+      });
+
       return {
         success: true,
         userId: user.id,
@@ -476,6 +492,17 @@ export class IdentityAccessService {
       subjectType: 'user',
       subjectId: user.id,
       payload: {
+        email: user.email
+      }
+    });
+
+    await this.notificationService.emitToPlatformAdmins({
+      type: 'admin.auth.password_reset_requested',
+      title: 'Password reset requested',
+      message: `${recipientName} requested a password reset email.`,
+      entityType: 'user',
+      entityId: user.id,
+      metadata: {
         email: user.email
       }
     });

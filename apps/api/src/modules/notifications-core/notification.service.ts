@@ -1,5 +1,6 @@
 import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import type { AuthContext } from '../../app/auth-context.js';
+import { PrismaService } from '../../app/prisma.service.js';
 import { ResourceAccessService } from '../../app/resource-access.service.js';
 import { EmailService } from './email.service.js';
 import { NotificationRepository, type CreateNotificationInput } from './notification.repository.js';
@@ -13,7 +14,8 @@ export class NotificationService {
   constructor(
     @Inject(NotificationRepository) private readonly notificationRepository: NotificationRepository,
     @Inject(EmailService) private readonly emailService: EmailService,
-    @Inject(ResourceAccessService) private readonly resourceAccessService: ResourceAccessService
+    @Inject(ResourceAccessService) private readonly resourceAccessService: ResourceAccessService,
+    @Inject(PrismaService) private readonly prismaService: PrismaService
   ) {}
 
   async listNotifications(authContext: AuthContext, query: NotificationListQuery = {}) {
@@ -66,5 +68,26 @@ export class NotificationService {
   async emitMany(users: string[], input: Omit<CreateNotificationInput, 'userId'>) {
     const recipients = Array.from(new Set(users.filter(Boolean)));
     return Promise.all(recipients.map((userId) => this.emit({ userId, ...input }, input.type)));
+  }
+
+  async emitToPlatformAdmins(input: Omit<CreateNotificationInput, 'userId'>) {
+    const adminIds = await this.prismaService.client.userRole.findMany({
+      where: {
+        role: {
+          code: 'platform_admin'
+        }
+      },
+      select: {
+        userId: true
+      },
+      distinct: ['userId']
+    });
+
+    const recipients = adminIds.map((entry) => entry.userId).filter(Boolean);
+    if (!recipients.length) {
+      return [];
+    }
+
+    return this.emitMany(recipients, input);
   }
 }

@@ -520,11 +520,40 @@ export class ContractCoreService {
     const recipients = [deal.buyerUserId, deal.supplierUserId].filter((value): value is string => Boolean(value));
 
     if (!recipients.length) {
+      await this.notificationService.emitToPlatformAdmins({
+        type: `admin.${type}`,
+        title,
+        message,
+        entityType: 'contract-rfq-deal',
+        entityId: deal.id,
+        metadata: {
+          dealStatus: deal.dealStatus,
+          buyerStatus: deal.buyerStatus,
+          supplierStatus: deal.supplierStatus,
+          rfqId: deal.rfqId,
+          quoteId: deal.quoteId
+        }
+      });
       return;
     }
 
     await this.notificationService.emitMany(recipients, {
       type,
+      title,
+      message,
+      entityType: 'contract-rfq-deal',
+      entityId: deal.id,
+      metadata: {
+        dealStatus: deal.dealStatus,
+        buyerStatus: deal.buyerStatus,
+        supplierStatus: deal.supplierStatus,
+        rfqId: deal.rfqId,
+        quoteId: deal.quoteId
+      }
+    });
+
+    await this.notificationService.emitToPlatformAdmins({
+      type: `admin.${type}`,
       title,
       message,
       entityType: 'contract-rfq-deal',
