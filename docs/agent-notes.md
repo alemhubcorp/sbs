@@ -125,5 +125,5 @@ Short project memory for recurring fixes and production incidents.
 - task: stage 4 harden payment webhook ingestion
 - root cause: payment webhooks were protected by JWT instead of provider signatures, signature validation allowed missing secrets/providers, and npm registry ECONNRESET could fail Docker deploys without retries
 - fix: make webhook routes public only through fail-closed HMAC/timestamp validation on raw body, remove secret-header equality fallback, reject disabled/missing-secret providers, and add npm fetch retry/timeout config to the production Docker build
-- commit: pending
+- commit: `353f843`
 - deploy result: pending
