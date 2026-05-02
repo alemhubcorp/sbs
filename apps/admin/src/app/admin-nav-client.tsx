@@ -43,6 +43,8 @@ const css = `
   .asb-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; color: #94a3b8; font-size: 13.5px; font-weight: 500; transition: background 120ms, color 120ms; }
   .asb-link:hover { background: rgba(255,255,255,0.06); color: #e2e8f0; }
   .asb-link-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+  .asb-site-link { display: flex; align-items: center; gap: 8px; padding: 9px 12px; margin: 0 10px 8px; border-radius: 8px; background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.18); text-decoration: none; color: #34d399; font-size: 12.5px; font-weight: 600; transition: background 120ms; }
+  .asb-site-link:hover { background: rgba(52,211,153,0.15); }
   .asb-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 10px; }
   .asb-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#334155,#1e293b); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #94a3b8; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
   .asb-user-name { font-size: 13px; font-weight: 600; color: #e2e8f0; }
@@ -154,6 +156,9 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
         ))}
       </nav>
 
+      <a href="https://alemhub.sbs" target="_blank" rel="noreferrer" className="asb-site-link">
+        🌐 <span>Visit Website</span>
+      </a>
       <div className="asb-footer">
         <div className="asb-avatar">A</div>
         <div>

@@ -22,7 +22,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .search-box input::placeholder{color:#9ca3af}
 .nav-r{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .nav-pill{font-size:.78rem;font-weight:500;color:#4b5563;padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;background:#fff;cursor:pointer}
-.btn-dark{background:#0d1f3c;color:#fff;border-radius:7px;padding:6px 16px;font-size:.83rem;font-weight:600}
+.btn-dark{background:#0d1f3c;color:#fff;border-radius:7px;padding:6px 16px;font-size:.83rem;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center}.btn-register{background:#fff;color:#0d1f3c;border:1.5px solid #e5e7eb;border-radius:7px;padding:6px 16px;font-size:.83rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center}
 
 /* HERO */
 .hero{background:#f9fafb;border-bottom:1px solid #e5e7eb;padding:60px 40px 52px}
@@ -31,7 +31,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .hero h1{font-size:3.2rem;font-weight:800;letter-spacing:-.03em;color:#0d1f3c;line-height:1.1;max-width:620px;margin-bottom:16px}
 .hero-sub{font-size:1rem;line-height:1.7;color:#6b7280;max-width:520px;margin-bottom:32px}
 .hero-btns{display:flex;gap:10px;margin-bottom:44px}
-.btn-primary{background:#0d1f3c;color:#fff;border-radius:8px;padding:11px 22px;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:#0d1f3c;color:#fff;border-radius:8px;padding:11px 22px;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
 .btn-secondary{background:#fff;color:#374151;border:1.5px solid #e5e7eb;border-radius:8px;padding:11px 22px;font-size:.9rem;font-weight:600}
 .trust-strip{display:flex;gap:28px;padding-top:22px;border-top:1px solid #e5e7eb;flex-wrap:wrap}
 .trust-item{display:flex;align-items:center;gap:8px;font-size:.8rem;color:#6b7280}
@@ -148,7 +148,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 .cta-title{font-size:1.8rem;font-weight:800;letter-spacing:-.02em;color:#fff;margin-bottom:7px}
 .cta-sub{font-size:.88rem;color:rgba(255,255,255,.5)}
 .cta-btns{display:flex;gap:9px}
-.btn-teal{background:#0d7a5f;color:#fff;border-radius:8px;padding:11px 22px;font-size:.88rem;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.btn-teal{background:#0d1f3c;color:#fff;border-radius:8px;padding:11px 22px;font-size:.88rem;font-weight:600;display:inline-flex;align-items:center;gap:6px}
 .btn-ghost{border:1.5px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);border-radius:8px;padding:11px 22px;font-size:.88rem;font-weight:600}
 
 /* FOOTER */
@@ -192,7 +192,7 @@ footer{border-top:1px solid #e5e7eb;padding:52px 40px 0}
     <span class="nav-pill">🌐 USD</span>
     <span class="nav-pill">EN</span>
     <span class="nav-pill">🛒</span>
-    <button class="btn-dark">Sign In</button>
+    <a href="/signin" class="btn-dark" style="text-decoration:none">Sign In</a><a href="/register" class="btn-register" style="text-decoration:none">Register</a>
   </div>
 </nav>
 

@@ -519,7 +519,7 @@
 .button:hover, .buttonSecondary:hover, .buttonDanger:hover { transform: translateY(-1px); }
 .button:disabled, .buttonSecondary:disabled, .buttonDanger:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
-.button { background: linear-gradient(135deg, var(--navy), #1d4ed8); color: #fff; }
+.button { background: var(--navy); color: #fff; }
 .buttonSecondary { background: var(--gray-100); color: var(--navy); border: 1px solid var(--gray-200); }
 .buttonDanger { background: #be123c; color: #fff; }
 
