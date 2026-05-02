@@ -71,3 +71,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: revert the shell replacement, keep the original homepage markup, and add minimal mobile menu/responsive overrides to the existing template
 - commit: pending
 - deploy result: pending
+
+- task: compact homepage product cards on mobile
+- root cause: the smallest mobile override forced product grids to one column, making cards too large
+- fix: keep two product-card columns on mobile and reduce image height, typography, and card padding
+- commit: pending
+- deploy result: pending
