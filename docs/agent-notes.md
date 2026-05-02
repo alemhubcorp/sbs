@@ -53,3 +53,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: keep card as a working payment method, but route users to hosted checkout instructions and confirm completion without sending PAN/CVV through Alemhub
 - commit: pending
 - deploy result: pending
+
+- task: deploy build hotfix for route shell controls
+- root cause: CSS module class lookup returned `string | undefined`, but `document.body.classList.toggle/remove` requires a definite string
+- fix: use a fixed global body class name for mobile menu scroll lock
+- commit: pending
+- deploy result: pending

@@ -21,6 +21,7 @@ const languageOptions = ['EN', 'RU', 'KK'] as const;
 const currencyKey = 'alemhub_currency';
 const languageKey = 'alemhub_language';
 const cookieMaxAge = 60 * 60 * 24 * 365;
+const menuLockedClassName = 'route-shell-menu-locked';
 
 function persistPreference(name: string, value: string) {
   window.localStorage.setItem(name, value);
@@ -46,10 +47,10 @@ export function RouteShellControls({ navLinks, accountItems, isAuthenticated, ro
   }, []);
 
   useEffect(() => {
-    document.body.classList.toggle(styles.menuLocked, isMenuOpen);
+    document.body.classList.toggle(menuLockedClassName, isMenuOpen);
 
     return () => {
-      document.body.classList.remove(styles.menuLocked);
+      document.body.classList.remove(menuLockedClassName);
     };
   }, [isMenuOpen]);
 
