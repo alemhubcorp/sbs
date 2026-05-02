@@ -77,3 +77,21 @@ Short project memory for recurring fixes and production incidents.
 - fix: keep two product-card columns on mobile and reduce image height, typography, and card padding
 - commit: pending
 - deploy result: pending
+
+- task: unify compact shell controls and dark button contrast
+- root cause: public shell mixed long labels (`Currency`, `Language`, `Alerts`) with compact pills and several dark CTA states rendered low-contrast text
+- fix: switch shell controls to compact `USD/EN` style, replace alerts text with a bell icon, and enforce white text on shared dark buttons
+- commit: `110be66`
+- deploy result: pending
+
+- task: route key system events to platform admins
+- root cause: admin dashboard showed notifications, but registration and deal lifecycle events were only emitted to marketplace participants, not to platform admins
+- fix: add platform-admin fan-out in notification service and emit admin notifications for public registrations, password-reset email requests, and contract-deal lifecycle updates
+- commit: `e8c0d0e`
+- deploy result: pending
+
+- task: add public branding settings and logo upload
+- root cause: site branding was hardcoded in public shells and homepage template, so admin could not safely change the logo or short brand mark from the control panel
+- fix: add `public:branding` admin setting, support image upload/data URL storage, expose branding in public settings, and render it in public header/footer surfaces
+- commit: `76bc437`
+- deploy result: pending
