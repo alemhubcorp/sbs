@@ -28,3 +28,262 @@
   border: none;
   background: none;
 }
+
+.homeHeader {
+  position: sticky;
+  top: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 40px;
+  border-bottom: 1px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+}
+
+.homeLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: #0d1f3c;
+  font-size: 0.95rem;
+  text-decoration: none;
+}
+
+.homeLogoMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #0d1f3c;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.homeNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.homeNav a {
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #667085;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.homeNav a:hover {
+  background: #f3f4f6;
+  color: #0d1f3c;
+}
+
+.homeActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.homeIconButton,
+.homeSelectPill,
+.homeMenuButton {
+  min-height: 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #0d1f3c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.homeIconButton,
+.homeMenuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.homeSelectPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 10px;
+}
+
+.homeSelectPill span {
+  color: #667085;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.homeSelectPill select {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0d1f3c;
+  font: inherit;
+}
+
+.homeMenuButton {
+  display: none;
+  background: #0d1f3c;
+  color: #fff;
+}
+
+.homeMenuBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: none;
+  background: rgba(13, 31, 60, 0.42);
+}
+
+.homeMenuBackdropOpen {
+  display: block;
+}
+
+.homeDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 140;
+  width: min(360px, 88vw);
+  height: 100dvh;
+  padding: 22px;
+  transform: translateX(105%);
+  transition: transform 180ms ease;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  background: #0d1f3c;
+  color: #fff;
+  box-shadow: -30px 0 70px rgba(13, 31, 60, 0.22);
+}
+
+.homeDrawerOpen {
+  transform: translateX(0);
+}
+
+.homeDrawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.homeDrawerHeader div {
+  display: grid;
+  gap: 4px;
+}
+
+.homeDrawerHeader span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.homeDrawerHeader button {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: #fff;
+}
+
+.homeDrawerControls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.homeDrawerControls label {
+  display: grid;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.homeDrawerControls select {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 800;
+}
+
+.homeDrawerControls option {
+  color: #0d1f3c;
+}
+
+.homeDrawerLinks {
+  display: grid;
+  gap: 8px;
+}
+
+.homeDrawerLinks a {
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+@media (max-width: 980px) {
+  .homeHeader {
+    padding: 0 20px;
+  }
+
+  .homeNav {
+    display: none;
+  }
+
+  .homeActions {
+    margin-left: auto;
+  }
+
+  .homeIconButton {
+    display: none;
+  }
+
+  .homeMenuButton {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .homeHeader {
+    min-height: 58px;
+    padding: 0 16px;
+  }
+
+  .homeSelectPill {
+    min-height: 34px;
+    padding: 0 7px;
+  }
+
+  .homeSelectPill span {
+    display: none;
+  }
+}

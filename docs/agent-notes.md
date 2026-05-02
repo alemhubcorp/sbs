@@ -65,3 +65,9 @@ Short project memory for recurring fixes and production incidents.
 - fix: remove the global selector and lock mobile menu scroll with client-side `document.body.style.overflow`
 - commit: pending
 - deploy result: pending
+
+- task: apply stage 1 controls to the production homepage
+- root cause: stage 1 mobile menu and language/currency controls were wired to `RouteShell`, while `/` still rendered a static imported template header
+- fix: replace the homepage template header with a client-controlled homepage shell and add mobile-safe template layout overrides
+- commit: pending
+- deploy result: pending

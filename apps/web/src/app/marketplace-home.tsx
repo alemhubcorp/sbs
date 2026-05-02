@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { PublicPlatformSettings } from './platform-public-settings';
+import { HomeShellControls } from './home-shell-controls';
 import styles from './marketplace-home.module.css';
 
 function readTemplate() {
@@ -79,8 +80,47 @@ function readTemplate() {
   for (const [pattern, replacement] of hrefReplacements) {
     normalizedBody = normalizedBody.replace(pattern, replacement);
   }
+  normalizedBody = normalizedBody.replace(/<!-- NAV -->\s*<nav class="nav">[\s\S]*?<\/nav>/, '');
 
-  const normalizedStyle = style.replace(/body\{/g, `.${styles.templatePage}{`);
+  const normalizedStyle = `${style.replace(/body\{/g, `.${styles.templatePage}{`)}
+.${styles.templatePage}{width:100%;max-width:100vw;overflow-x:hidden}
+.${styles.templatePage} img{max-width:100%;height:auto}
+@media(max-width:760px){
+  .${styles.templatePage}{font-size:16px}
+  .${styles.templatePage} .hero,
+  .${styles.templatePage} .section,
+  .${styles.templatePage} .prod-section,
+  .${styles.templatePage} .feat-section,
+  .${styles.templatePage} .testi-section,
+  .${styles.templatePage} .cta,
+  .${styles.templatePage} footer{padding-left:20px;padding-right:20px}
+  .${styles.templatePage} .hero{padding-top:42px;padding-bottom:38px}
+  .${styles.templatePage} .hero h1{font-size:clamp(2.35rem,13vw,3.1rem);max-width:100%}
+  .${styles.templatePage} .hero-sub{max-width:100%}
+  .${styles.templatePage} .hero-btns,
+  .${styles.templatePage} .cta-btns{display:grid;grid-template-columns:1fr;gap:10px}
+  .${styles.templatePage} .btn-primary,
+  .${styles.templatePage} .btn-secondary,
+  .${styles.templatePage} .btn-teal,
+  .${styles.templatePage} .btn-ghost{justify-content:center;width:100%;text-align:center}
+  .${styles.templatePage} .trust-strip{display:grid;grid-template-columns:1fr;gap:12px}
+  .${styles.templatePage} .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .${styles.templatePage} .stat{padding:18px 20px}
+  .${styles.templatePage} .steps{display:grid;grid-template-columns:1fr}
+  .${styles.templatePage} .step{border-right:none;border-bottom:1px solid #e5e7eb}
+  .${styles.templatePage} .step:last-child{border-bottom:none}
+  .${styles.templatePage} .prod-row-head{align-items:flex-start;gap:12px;flex-direction:column}
+  .${styles.templatePage} .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .${styles.templatePage} .card-img{height:122px}
+  .${styles.templatePage} .feat-grid{grid-template-columns:1fr}
+  .${styles.templatePage} .why-section{padding-left:20px;padding-right:20px}
+  .${styles.templatePage} .footer-grid{grid-template-columns:1fr 1fr;gap:26px}
+}
+@media(max-width:420px){
+  .${styles.templatePage} .pgrid{grid-template-columns:1fr}
+  .${styles.templatePage} .stats{grid-template-columns:1fr}
+  .${styles.templatePage} .footer-grid{grid-template-columns:1fr}
+}`;
 
   return { style: normalizedStyle, body: normalizedBody };
 }
@@ -108,6 +148,7 @@ export function MarketplaceHome({
 
   return (
     <main className={styles.page}>
+      <HomeShellControls />
       <style dangerouslySetInnerHTML={{ __html: template.style }} />
       <div className={styles.templatePage} dangerouslySetInnerHTML={{ __html: body }} />
     </main>
