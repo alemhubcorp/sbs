@@ -19,11 +19,25 @@ async function bootstrap() {
   const allowedHeaders = 'Authorization, Content-Type, X-Correlation-Id';
   const allowedMethods = 'GET,POST,PUT,PATCH,DELETE,OPTIONS';
 
+  const adapter = new FastifyAdapter({
+    logger: true
+  });
+  const adapterInstance = adapter.getInstance();
+  adapterInstance.removeContentTypeParser('application/json');
+  adapterInstance.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
+    const rawBody = typeof body === 'string' ? body : body.toString('utf8');
+    (request as unknown as { rawBody: string }).rawBody = rawBody;
+
+    try {
+      done(null, rawBody ? JSON.parse(rawBody) : {});
+    } catch (error) {
+      done(error as Error, undefined);
+    }
+  });
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({
-      logger: true
-    })
+    adapter
   );
 
   app.setGlobalPrefix('api');

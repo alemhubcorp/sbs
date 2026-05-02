@@ -22,6 +22,7 @@ export interface ApiRequestLike {
   headers?: Record<string, string | string[] | undefined>;
   authContext?: AuthContext;
   id?: string;
+  rawBody?: string | Buffer;
 }
 
 export function createAnonymousAuthContext(): AuthContext {

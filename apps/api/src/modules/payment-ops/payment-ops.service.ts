@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { createHmac, createHash } from 'node:crypto';
+import { createHmac, createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import type { AuthContext, RequestAuditContext } from '../../app/auth-context.js';
 import { ResourceAccessService } from '../../app/resource-access.service.js';
@@ -363,13 +363,19 @@ export class PaymentOpsService {
     return updated;
   }
 
-  async ingestWebhook(providerKey: string, input: unknown, headers: Record<string, string | string[] | undefined>, auditContext: RequestAuditContext) {
+  async ingestWebhook(
+    providerKey: string,
+    input: unknown,
+    headers: Record<string, string | string[] | undefined>,
+    rawBody: string | Buffer | undefined,
+    auditContext: RequestAuditContext
+  ) {
     const parsed = webhookSchema.parse(input);
     const settings = await this.loadSettings();
     const provider = settings.paymentProviders[providerKey] ?? null;
     const eventId = parsed.eventId ?? parsed.externalId ?? parsed.transactionId ?? parsed.paymentReference ?? `evt_${stableHash(parsed)}`;
     const inboxProvider = `payment-webhook:${providerKey}`;
-    const signatureValid = this.validateWebhook(headers, provider, parsed);
+    const signatureValid = this.validateWebhook(headers, provider, rawBody ?? JSON.stringify(input ?? {}));
     const rawPayload = {
       providerKey,
       receivedAt: new Date().toISOString(),
@@ -397,7 +403,7 @@ export class PaymentOpsService {
       };
     }
 
-    if (!signatureValid && provider?.enabled) {
+    if (!signatureValid) {
       await this.prismaService.client.inboxMessage.upsert({
         where: {
           provider_externalId: {
@@ -988,33 +994,58 @@ export class PaymentOpsService {
   private validateWebhook(
     headers: Record<string, string | string[] | undefined>,
     provider: PlatformProviderConnection | null,
-    payload: unknown
+    payload: string | Buffer
   ) {
     if (!provider || !provider.enabled) {
-      return true;
-    }
-
-    const secret = provider.webhookSecret || provider.clientSecret || provider.secretKey;
-    if (!secret) {
-      return true;
-    }
-
-    const headerValue = this.readHeader(headers, 'x-webhook-signature') ?? this.readHeader(headers, 'x-airwallex-signature') ?? this.readHeader(headers, 'x-webhook-secret');
-    if (!headerValue) {
       return false;
     }
 
-    if (headerValue === secret) {
-      return true;
+    const secret = provider.webhookSecret;
+    if (!secret) {
+      return false;
     }
 
-    const expected = createHmac('sha256', secret).update(JSON.stringify(payload ?? {})).digest('hex');
-    return headerValue === expected;
+    const timestamp = this.readHeader(headers, 'x-webhook-timestamp') ?? this.readHeader(headers, 'x-airwallex-timestamp');
+    if (!timestamp || !this.isWebhookTimestampFresh(timestamp)) {
+      return false;
+    }
+
+    const headerValue = this.readHeader(headers, 'x-webhook-signature') ?? this.readHeader(headers, 'x-airwallex-signature');
+    if (!headerValue) return false;
+
+    const rawPayload = Buffer.isBuffer(payload) ? payload.toString('utf8') : payload;
+    const signedPayload = `${timestamp}.${rawPayload}`;
+    const expected = createHmac('sha256', secret).update(signedPayload).digest('hex');
+    return this.safeCompareSignature(headerValue, expected);
   }
 
   private readHeader(headers: Record<string, string | string[] | undefined>, name: string) {
     const value = headers[name] ?? headers[name.toLowerCase()];
     return Array.isArray(value) ? value[0] : value ?? null;
+  }
+
+  private isWebhookTimestampFresh(timestamp: string) {
+    const numeric = Number(timestamp);
+    const timestampMs = Number.isFinite(numeric)
+      ? (numeric > 1_000_000_000_000 ? numeric : numeric * 1000)
+      : Date.parse(timestamp);
+
+    if (!Number.isFinite(timestampMs)) {
+      return false;
+    }
+
+    return Math.abs(Date.now() - timestampMs) <= 5 * 60 * 1000;
+  }
+
+  private safeCompareSignature(headerValue: string, expectedHex: string) {
+    const candidate = headerValue.trim().replace(/^sha256=/i, '');
+    if (!/^[a-f0-9]{64}$/i.test(candidate)) {
+      return false;
+    }
+
+    const candidateBuffer = Buffer.from(candidate, 'hex');
+    const expectedBuffer = Buffer.from(expectedHex, 'hex');
+    return candidateBuffer.length === expectedBuffer.length && timingSafeEqual(candidateBuffer, expectedBuffer);
   }
 
   private async findOrCreatePaymentFromWebhook(

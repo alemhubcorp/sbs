@@ -2,6 +2,7 @@ import { Body, Controller, Get, Headers, Inject, Param, Post, Query, Req } from 
 import { CurrentAuthContext } from '../../app/current-auth-context.decorator.js';
 import { extractRequestAuditContext, type ApiRequestLike } from '../../app/auth-context.js';
 import { RequirePermissions } from '../../app/permissions.decorator.js';
+import { Public } from '../../app/public.decorator.js';
 import { PaymentOpsService } from './payment-ops.service.js';
 
 @Controller('admin/payments')
@@ -83,13 +84,14 @@ export class PaymentWebhookController {
   constructor(@Inject(PaymentOpsService) private readonly paymentOpsService: PaymentOpsService) {}
 
   @Post(':provider')
+  @Public()
   ingestWebhook(
     @Param('provider') provider: string,
     @Body() body: unknown,
     @Headers() headers: Record<string, string | string[] | undefined>,
     @Req() request: ApiRequestLike
   ) {
-    return this.paymentOpsService.ingestWebhook(provider, body, headers, extractRequestAuditContext(request));
+    return this.paymentOpsService.ingestWebhook(provider, body, headers, request.rawBody, extractRequestAuditContext(request));
   }
 }
 
@@ -98,12 +100,13 @@ export class PlatformWebhookCompatibilityController {
   constructor(@Inject(PaymentOpsService) private readonly paymentOpsService: PaymentOpsService) {}
 
   @Post(':provider')
+  @Public()
   ingestWebhook(
     @Param('provider') provider: string,
     @Body() body: unknown,
     @Headers() headers: Record<string, string | string[] | undefined>,
     @Req() request: ApiRequestLike
   ) {
-    return this.paymentOpsService.ingestWebhook(provider, body, headers, extractRequestAuditContext(request));
+    return this.paymentOpsService.ingestWebhook(provider, body, headers, request.rawBody, extractRequestAuditContext(request));
   }
 }
