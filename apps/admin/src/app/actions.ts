@@ -681,6 +681,23 @@ function collectIndexedRecords(
   return records.filter((record) => fields.some((field) => typeof record[field] === 'string' && String(record[field]).length > 0));
 }
 
+async function readUploadedImageDataUrl(entry: FormDataEntryValue | null) {
+  if (!(entry instanceof File) || entry.size === 0) {
+    return null;
+  }
+
+  if (!entry.type.startsWith('image/')) {
+    throw new Error('Logo file must be an image.');
+  }
+
+  if (entry.size > 1024 * 1024) {
+    throw new Error('Logo file is too large. Use an image up to 1 MB.');
+  }
+
+  const buffer = Buffer.from(await entry.arrayBuffer());
+  return `data:${entry.type};base64,${buffer.toString('base64')}`;
+}
+
 export async function updateGovernanceSettingsAction(formData: FormData) {
   await sendJson(
     '/api/admin/settings/governance:auth',
@@ -692,6 +709,26 @@ export async function updateGovernanceSettingsAction(formData: FormData) {
       }
     },
     ['/admin/settings/platform']
+  );
+}
+
+export async function updateBrandingSettingsAction(formData: FormData) {
+  const uploadedLogo = await readUploadedImageDataUrl(formData.get('logoFile'));
+  const typedLogoUrl = String(formData.get('logoUrl') ?? '').trim();
+
+  await sendJson(
+    '/api/admin/settings/public:branding',
+    'PUT',
+    {
+      section: 'public',
+      value: {
+        siteName: String(formData.get('siteName') ?? 'Alemhub').trim() || 'Alemhub',
+        logoAlt: String(formData.get('logoAlt') ?? 'Alemhub logo').trim() || 'Alemhub logo',
+        markText: String(formData.get('markText') ?? 'AH').trim() || 'AH',
+        logoUrl: uploadedLogo ?? typedLogoUrl
+      }
+    },
+    ['/admin/settings/platform', '/', '/products', '/vendors', '/categories', '/logistics', '/customs', '/pricing']
   );
 }
 

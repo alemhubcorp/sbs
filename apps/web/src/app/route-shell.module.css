@@ -59,6 +59,13 @@
   box-shadow: 0 2px 8px rgba(10,123,97,.28);
 }
 
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .navLinks {
   display: flex;
   align-items: center;

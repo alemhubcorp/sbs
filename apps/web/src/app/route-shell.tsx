@@ -173,13 +173,19 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
     return column;
   });
   const footerLegalLinks = publicSettings?.legalDocuments.filter((item) => item.showInFooter) ?? [];
+  const brandName = publicSettings?.branding.siteName?.trim() || 'Alemhub';
+  const brandMark = publicSettings?.branding.markText?.trim() || 'A';
+  const brandLogoUrl = publicSettings?.branding.logoUrl?.trim() || '';
+  const brandLogoAlt = publicSettings?.branding.logoAlt?.trim() || `${brandName} logo`;
 
   return (
     <main className={styles.page}>
       <nav className={styles.nav}>
         <Link href="/" className={styles.logo}>
-          <div className={styles.logoBox}>A</div>
-          Alemhub
+          <div className={styles.logoBox}>
+            {brandLogoUrl ? <img src={brandLogoUrl} alt={brandLogoAlt} className={styles.logoImage} /> : brandMark}
+          </div>
+          {brandName}
         </Link>
         <div className={styles.navLinks}>
           {navLinks.map((link) => (
@@ -238,8 +244,10 @@ async function RouteShellContent({ eyebrow, title, description, primary, seconda
         <div className={styles.footerGrid}>
           <div>
             <Link href="/" className={styles.logo}>
-              <div className={styles.logoBox}>A</div>
-              Alemhub
+              <div className={styles.logoBox}>
+                {brandLogoUrl ? <img src={brandLogoUrl} alt={brandLogoAlt} className={styles.logoImage} /> : brandMark}
+              </div>
+              {brandName}
             </Link>
             <p className={styles.footerAbout}>
               Your trusted B2B2C international marketplace connecting suppliers, businesses, and consumers worldwide.

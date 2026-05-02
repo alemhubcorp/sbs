@@ -12,6 +12,7 @@ export const adminSettingKeys = {
   email: 'email:default',
   paymentRouting: 'payment-routing:default',
   governanceAuth: 'governance:auth',
+  publicBranding: 'public:branding',
   publicSocialLinks: 'public:social-links',
   publicContacts: 'public:contact-settings',
   legalDocuments: 'legal:documents',
@@ -267,6 +268,16 @@ export const defaultAdminSettings = [
       supplierRegistrationDocumentSlugs: ['terms', 'privacy', 'seller-policy'],
       checkoutDocumentSlugs: ['terms', 'privacy'],
       dealFundingDocumentSlugs: ['terms', 'privacy']
+    }
+  },
+  {
+    key: adminSettingKeys.publicBranding,
+    section: 'public',
+    value: {
+      siteName: 'Alemhub',
+      logoUrl: '',
+      logoAlt: 'Alemhub logo',
+      markText: 'AH'
     }
   },
   {

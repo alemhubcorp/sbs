@@ -184,17 +184,48 @@ function injectProductSlugs(body: string, products: Array<{ slug: string }>) {
   });
 }
 
+function applyBranding(
+  body: string,
+  publicSettings: PublicPlatformSettings | null
+) {
+  const branding = publicSettings?.branding;
+  if (!branding) {
+    return body;
+  }
+
+  const siteName = escapeHtml(branding.siteName.trim() || 'Alemhub');
+  const logoAlt = escapeHtml(branding.logoAlt.trim() || `${siteName} logo`);
+  const markText = escapeHtml(branding.markText.trim() || 'AH');
+  const logoUrl = escapeHtml(branding.logoUrl.trim());
+  const navLogoBox = branding.logoUrl
+    ? `<div class="logo-box"><img src="${logoUrl}" alt="${logoAlt}" style="width:100%;height:100%;object-fit:contain;display:block"></div>`
+    : `<div class="logo-box">${markText}</div>`;
+
+  return body
+    .replace(/<div class="logo-box">AH<\/div>\s*Alemhub/, `${navLogoBox}${siteName}`)
+    .replace(/<div class="logo-box">A<\/div>Alemhub/g, `${navLogoBox}${siteName}`);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 export function MarketplaceHome({
   healthStatus: _healthStatus,
   products,
-  publicSettings: _publicSettings
+  publicSettings
 }: {
   healthStatus: string;
   products: Array<{ slug: string; name: string }>;
   publicSettings: PublicPlatformSettings | null;
 }) {
   const template = readTemplate();
-  const body = injectProductSlugs(template.body, products);
+  const body = applyBranding(injectProductSlugs(template.body, products), publicSettings);
 
   return (
     <main className={styles.page}>

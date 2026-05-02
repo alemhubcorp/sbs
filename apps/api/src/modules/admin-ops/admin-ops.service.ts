@@ -274,6 +274,13 @@ type PublicEntrySetting = {
   displayOrder: number;
 };
 
+type PublicBrandingSetting = {
+  siteName: string;
+  logoUrl: string;
+  logoAlt: string;
+  markText: string;
+};
+
 @Injectable()
 export class AdminOpsService {
   constructor(
@@ -352,6 +359,7 @@ export class AdminOpsService {
       }));
 
     return {
+      branding: this.readBranding(rows),
       company: {
         legalName: settings.platformReceiving.platformLegalName,
         address: settings.platformReceiving.platformAddress,
@@ -1449,6 +1457,19 @@ export class AdminOpsService {
         displayOrder: getNumber(entry.displayOrder, index + 1)
       }))
       .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id));
+  }
+
+  private readBranding(rows: AdminSettingRow[]): PublicBrandingSetting {
+    const value = isRecord(getSettingValue(rows, adminSettingKeys.publicBranding))
+      ? (getSettingValue(rows, adminSettingKeys.publicBranding) as Record<string, unknown>)
+      : {};
+
+    return {
+      siteName: getString(value.siteName, 'Alemhub'),
+      logoUrl: getString(value.logoUrl, ''),
+      logoAlt: getString(value.logoAlt, 'Alemhub logo'),
+      markText: getString(value.markText, 'AH')
+    };
   }
 
   private isEmailConfigured(rows: AdminSettingRow[]) {

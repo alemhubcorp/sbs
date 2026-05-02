@@ -2,6 +2,12 @@ const internalApiBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
 export type PublicPlatformSettings = {
+  branding: {
+    siteName: string;
+    logoUrl: string;
+    logoAlt: string;
+    markText: string;
+  };
   company: {
     legalName: string;
     address: string;

@@ -1,5 +1,6 @@
 import {
   updateAiContentSettingsAction,
+  updateBrandingSettingsAction,
   updateContactSettingsAction,
   updateGovernanceSettingsAction,
   updateSocialLinksSettingsAction
@@ -35,8 +36,9 @@ function asArray(value: unknown) {
 
 export default async function PlatformSettingsPage() {
   const accessToken = await requireAccessToken('/settings/platform');
-  const [governanceSetting, socialSetting, contactSetting, aiSetting, emailSetting] = await Promise.all([
+  const [governanceSetting, brandingSetting, socialSetting, contactSetting, aiSetting, emailSetting] = await Promise.all([
     fetchJson<SettingRow>('/api/admin/settings/governance:auth', accessToken),
+    fetchJson<SettingRow>('/api/admin/settings/public:branding', accessToken),
     fetchJson<SettingRow>('/api/admin/settings/public:social-links', accessToken),
     fetchJson<SettingRow>('/api/admin/settings/public:contact-settings', accessToken),
     fetchJson<SettingRow>('/api/admin/settings/ai:content-assistant', accessToken),
@@ -44,6 +46,7 @@ export default async function PlatformSettingsPage() {
   ]);
 
   const governance = asRecord(governanceSetting.value);
+  const branding = asRecord(brandingSetting.value);
   const socialItems = asArray(asRecord(socialSetting.value).items);
   const addresses = asArray(asRecord(contactSetting.value).addresses);
   const phones = asArray(asRecord(contactSetting.value).phones);
@@ -83,6 +86,42 @@ export default async function PlatformSettingsPage() {
           ) : null}
           <div>
             <button type="submit">Save governance</button>
+          </div>
+        </form>
+      </section>
+
+      <section style={{ padding: 24, borderRadius: 26, background: 'rgba(255,255,255,0.96)', border: '1px solid rgba(148,163,184,0.18)' }}>
+        <form action={updateBrandingSettingsAction} style={{ display: 'grid', gap: 18 }}>
+          <div>
+            <h2 style={{ margin: 0, color: '#0f172a' }}>Site branding</h2>
+            <p style={{ margin: '8px 0 0', color: '#64748b' }}>Upload the public logo and control the header/footer brand name shown across the marketplace.</p>
+          </div>
+          {String(branding.logoUrl ?? '').trim() ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 18, background: '#f8fafc', border: '1px solid rgba(226,232,240,0.9)' }}>
+              <img
+                src={String(branding.logoUrl)}
+                alt={String(branding.logoAlt ?? 'Alemhub logo')}
+                style={{ width: 56, height: 56, objectFit: 'contain', borderRadius: 12, background: '#fff', border: '1px solid rgba(226,232,240,0.9)', padding: 8 }}
+              />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Current logo</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>This image is used in the public header and footer.</div>
+              </div>
+            </div>
+          ) : null}
+          <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+            <input name="siteName" defaultValue={String(branding.siteName ?? 'Alemhub')} placeholder="site name" />
+            <input name="markText" defaultValue={String(branding.markText ?? 'AH')} placeholder="mark text" maxLength={4} />
+            <input name="logoAlt" defaultValue={String(branding.logoAlt ?? 'Alemhub logo')} placeholder="logo alt text" />
+            <input name="logoUrl" defaultValue={String(branding.logoUrl ?? '')} placeholder="https://... or leave blank when uploading a file" />
+          </div>
+          <label style={{ display: 'grid', gap: 8, color: '#0f172a' }}>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Upload logo file</span>
+            <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+            <span style={{ fontSize: 12, color: '#64748b' }}>Supported: PNG, JPG, WEBP, SVG. Max 1 MB. Uploaded file overrides the URL field.</span>
+          </label>
+          <div>
+            <button type="submit">Save branding</button>
           </div>
         </form>
       </section>
