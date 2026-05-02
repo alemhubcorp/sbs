@@ -95,7 +95,8 @@ function readTemplate() {
     .replace(
       '<span class="nav-pill">EN</span>',
       '<label class="nav-pill nav-select-pill" aria-label="Language"><select data-pref-key="alemhub_language"><option value="EN">EN</option><option value="RU">RU</option><option value="KK">KK</option></select></label>'
-    );
+    )
+    .replace('<span class="nav-pill">🛒</span>', '<a href="/notifications" class="nav-pill" aria-label="Notifications">🔔</a>');
 
   const normalizedStyle = `${style.replace(/body\{/g, `.${styles.templatePage}{`)}
 .${styles.templatePage}{width:100%;max-width:100vw;overflow-x:hidden}
@@ -104,6 +105,12 @@ function readTemplate() {
 .${styles.templatePage} .mobile-menu-close{display:none}
 .${styles.templatePage} .nav-select-pill{display:inline-flex;align-items:center;gap:4px}
 .${styles.templatePage} .nav-select-pill select{border:0;background:transparent;color:inherit;font:inherit;font-weight:700;outline:0}
+.${styles.templatePage} .btn-dark,
+.${styles.templatePage} .btn-primary,
+.${styles.templatePage} .btn-teal{color:#fff !important}
+.${styles.templatePage} .btn-dark:visited,
+.${styles.templatePage} .btn-primary:visited,
+.${styles.templatePage} .btn-teal:visited{color:#fff !important}
 @media(max-width:760px){
   .${styles.templatePage} .nav{padding:0 14px;height:56px;gap:8px}
   .${styles.templatePage} .logo{font-size:.82rem}

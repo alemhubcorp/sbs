@@ -108,6 +108,13 @@
 }
 .navPill:hover { background: var(--gray-50); }
 
+.iconOnly {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+}
+
 .controlPill {
   min-height: 32px;
   font-size: 11px;
@@ -125,6 +132,15 @@
 .controlPill:hover {
   background: var(--gray-50);
   border-color: var(--gray-300);
+}
+.controlIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gray-500);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
 }
 .controlPill select {
   height: 24px;
@@ -283,7 +299,7 @@
   height: 36px;
   padding: 0 16px;
   background: var(--navy);
-  color: #fff;
+  color: #fff !important;
   border-radius: var(--r-pill);
   font-size: 13px;
   font-weight: 700;
@@ -366,7 +382,7 @@
   height: 44px;
   padding: 0 22px;
   background: linear-gradient(135deg, var(--navy) 0%, #163a7a 100%);
-  color: #fff;
+  color: #fff !important;
   border-radius: var(--r-pill);
   font-size: 14px;
   font-weight: 700;
@@ -397,6 +413,11 @@
   text-decoration: none;
 }
 .btnSecondary:hover { border-color: var(--gray-300); transform: translateY(-1px); }
+
+.btnDark:visited,
+.btnPrimary:visited {
+  color: #fff !important;
+}
 
 /* ── CONTENT AREA ──────────────────────────────────────────── */
 .content {
@@ -519,7 +540,7 @@
 .button:hover, .buttonSecondary:hover, .buttonDanger:hover { transform: translateY(-1px); }
 .button:disabled, .buttonSecondary:disabled, .buttonDanger:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
-.button { background: var(--navy); color: #fff; }
+.button { background: var(--navy); color: #fff !important; }
 .buttonSecondary { background: var(--gray-100); color: var(--navy); border: 1px solid var(--gray-200); }
 .buttonDanger { background: #be123c; color: #fff; }
 

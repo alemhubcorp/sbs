@@ -75,10 +75,14 @@ export function RouteShellControls({ navLinks, accountItems, isAuthenticated, ro
     <>
       <div className={styles.desktopActions}>
         <Link href="/notifications" className={styles.navPill} aria-label="Notifications">
-          Alerts
+          <span className={styles.iconOnly} aria-hidden="true">
+            🔔
+          </span>
         </Link>
         <label className={styles.controlPill}>
-          <span>Currency</span>
+          <span className={styles.controlIcon} aria-hidden="true">
+            🌐
+          </span>
           <select
             aria-label="Currency"
             value={currency}
@@ -92,7 +96,6 @@ export function RouteShellControls({ navLinks, accountItems, isAuthenticated, ro
           </select>
         </label>
         <label className={styles.controlPill}>
-          <span>Language</span>
           <select
             aria-label="Language"
             value={language}
@@ -163,7 +166,7 @@ export function RouteShellControls({ navLinks, accountItems, isAuthenticated, ro
 
         <div className={styles.mobileUtilityGrid}>
           <label className={styles.mobileSelect}>
-            Currency
+            Cur
             <select
               value={currency}
               onChange={(event) => handleCurrencyChange(event.target.value as (typeof currencyOptions)[number])}
@@ -176,7 +179,7 @@ export function RouteShellControls({ navLinks, accountItems, isAuthenticated, ro
             </select>
           </label>
           <label className={styles.mobileSelect}>
-            Language
+            Lang
             <select
               value={language}
               onChange={(event) => handleLanguageChange(event.target.value as (typeof languageOptions)[number])}
