@@ -21,7 +21,7 @@ Short project memory for recurring fixes and production incidents.
 - task: stage 1 external UX hardening
 - root cause: route shell had hidden mobile navigation and static currency/language pills that looked clickable but did nothing
 - fix: add a client shell control with working mobile drawer plus persisted language/currency preferences
-- commit: pending
+- commit: `9587ddd`
 - deploy result: pending
 
 - task: stage 2 wishlist implementation
@@ -94,4 +94,10 @@ Short project memory for recurring fixes and production incidents.
 - root cause: site branding was hardcoded in public shells and homepage template, so admin could not safely change the logo or short brand mark from the control panel
 - fix: add `public:branding` admin setting, support image upload/data URL storage, expose branding in public settings, and render it in public header/footer surfaces
 - commit: `76bc437`
+- deploy result: pending
+
+- task: align homepage styling, harden logo upload, and add partner registration
+- root cause: homepage still used separate static-template shell styling, branding upload stored the original image format and failed hard when branding setting was unavailable, and public registration only accepted buyer/supplier roles
+- fix: align homepage nav/CTA contrast with the shared public shell, convert uploaded logo files to WebP before storing, use a branding fallback in admin settings, and add logistics/customs registration roles with partner organizations and role-safe post-login redirects
+- commit: pending
 - deploy result: pending
