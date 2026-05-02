@@ -113,5 +113,5 @@ Short project memory for recurring fixes and production incidents.
 - task: stage 2 uploaded files and WebP image normalization
 - root cause: admin had no central uploaded-file index, product image uploads stored original image formats, and uploaded files could not be filtered or managed from the admin control panel
 - fix: add uploaded file records, image-to-WebP conversion for product/admin uploads, an admin Uploaded Files page with image/document sections, filters, upload, download, copy URL, file info, and delete metadata action
-- commit: pending
+- commit: `6557df0`
 - deploy result: pending
