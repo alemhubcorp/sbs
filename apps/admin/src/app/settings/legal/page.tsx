@@ -4,18 +4,22 @@ import { requireAccessToken } from '../../../lib/auth';
 const internalBaseUrl =
   process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
 
-async function fetchJson<T>(path: string, accessToken: string): Promise<T> {
-  const response = await fetch(`${internalBaseUrl}${path}`, {
-    headers: {
-      authorization: `Bearer ${accessToken}`
+async function fetchJsonOrDefault<T>(path: string, accessToken: string, fallback: T): Promise<T> {
+  try {
+    const response = await fetch(`${internalBaseUrl}${path}`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      return fallback;
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Request to ${path} failed with status ${response.status}`);
+    return response.json() as Promise<T>;
+  } catch {
+    return fallback;
   }
-
-  return response.json() as Promise<T>;
 }
 
 function asRecord(value: unknown) {
@@ -24,7 +28,7 @@ function asRecord(value: unknown) {
 
 export default async function LegalSettingsPage() {
   const accessToken = await requireAccessToken('/settings/legal');
-  const setting = await fetchJson<{ value?: unknown }>('/api/admin/settings/legal:documents', accessToken);
+  const setting = await fetchJsonOrDefault<{ value?: unknown }>('/api/admin/settings/legal:documents', accessToken, { value: { documents: [] } });
   const documents = Array.isArray(asRecord(setting.value).documents) ? (asRecord(setting.value).documents as unknown[]) : [];
   const bySlug = new Map(documents.map((entry) => [String(asRecord(entry).slug ?? ''), asRecord(entry)]));
   const slugs = ['terms', 'returns', 'support-policy', 'privacy', 'seller-policy'];

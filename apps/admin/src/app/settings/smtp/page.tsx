@@ -4,26 +4,55 @@ import { SmtpSettingsClient } from './smtp-settings-client';
 
 export const dynamic = 'force-dynamic';
 
-async function fetchJson<T>(path: string, accessToken: string) {
-  const internalBaseUrl = process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
-  const response = await fetch(`${internalBaseUrl}${path}`, {
-    headers: {
-      authorization: `Bearer ${accessToken}`
+const internalBaseUrl = process.env.API_INTERNAL_BASE_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3000';
+
+async function fetchJsonOrDefault<T>(path: string, accessToken: string, fallback: T): Promise<T> {
+  try {
+    const response = await fetch(`${internalBaseUrl}${path}`, {
+      headers: {
+        authorization: `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      return fallback;
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`Request to ${path} failed with status ${response.status}`);
+    return (await response.json()) as T;
+  } catch {
+    return fallback;
   }
-
-  return (await response.json()) as T;
 }
+
+const defaultEmailSetting = {
+  enabled: false,
+  provider: 'smtp',
+  smtpHost: '',
+  smtpPort: 587,
+  smtpUser: '',
+  smtpSecure: false,
+  fromName: 'Alemhub Marketplace',
+  fromEmail: 'noreply@alemhub.sbs',
+  replyToEmail: 'support@alemhub.sbs',
+  supportEmail: 'support@alemhub.sbs',
+  supportPhone: '',
+  notes: null,
+  lastAttemptAt: null,
+  lastAttemptStatus: null,
+  lastAttemptTransport: null,
+  lastAttemptRecipient: null,
+  lastAttemptEventType: null,
+  lastAttemptError: null
+};
 
 export default async function SmtpSettingsPage() {
   const dashboard = await getAdminDashboardData();
   const accessToken = await requireAccessToken('/settings/smtp');
-  const setting = dashboard.emailSetting ?? (await fetchJson<{ value: unknown }>('/api/admin/settings/email:default', accessToken)).value;
-  const current = (setting ?? {}) as {
+
+  const rawSetting = dashboard.emailSetting
+    ?? (await fetchJsonOrDefault<{ value: unknown }>('/api/admin/settings/email:default', accessToken, { value: null })).value;
+
+  const current = ((rawSetting ?? defaultEmailSetting) as {
     enabled?: boolean;
     provider?: string;
     smtpHost?: string;
@@ -42,7 +71,7 @@ export default async function SmtpSettingsPage() {
     lastAttemptRecipient?: string | null;
     lastAttemptEventType?: string | null;
     lastAttemptError?: string | null;
-  };
+  });
 
   return (
     <section style={{ display: 'grid', gap: 20 }}>

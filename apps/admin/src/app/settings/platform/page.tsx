@@ -53,12 +53,12 @@ function asArray(value: unknown) {
 export default async function PlatformSettingsPage() {
   const accessToken = await requireAccessToken('/settings/platform');
   const [governanceSetting, brandingSetting, socialSetting, contactSetting, aiSetting, emailSetting] = await Promise.all([
-    fetchJson<SettingRow>('/api/admin/settings/governance:auth', accessToken),
+    fetchJsonOrDefault<SettingRow>('/api/admin/settings/governance:auth', accessToken, { value: { emailVerificationRequired: false } }),
     fetchJsonOrDefault<SettingRow>('/api/admin/settings/public:branding', accessToken, defaultBrandingSetting),
-    fetchJson<SettingRow>('/api/admin/settings/public:social-links', accessToken),
-    fetchJson<SettingRow>('/api/admin/settings/public:contact-settings', accessToken),
-    fetchJson<SettingRow>('/api/admin/settings/ai:content-assistant', accessToken),
-    fetchJson<{ email?: { smtpConfigured?: boolean } }>('/api/platform/public-settings', accessToken)
+    fetchJsonOrDefault<SettingRow>('/api/admin/settings/public:social-links', accessToken, { value: { items: [] } }),
+    fetchJsonOrDefault<SettingRow>('/api/admin/settings/public:contact-settings', accessToken, { value: { addresses: [], phones: [] } }),
+    fetchJsonOrDefault<SettingRow>('/api/admin/settings/ai:content-assistant', accessToken, { value: { enabled: false } }),
+    fetchJsonOrDefault<{ email?: { smtpConfigured?: boolean } }>('/api/platform/public-settings', accessToken, {})
   ]);
 
   const governance = asRecord(governanceSetting.value);
