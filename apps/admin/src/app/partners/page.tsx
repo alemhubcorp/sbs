@@ -44,10 +44,10 @@ export default async function PartnersPage({
   const searchQuery = normalizeSearchParam(resolvedSearchParams.q).trim().toLowerCase();
   const partnerTypeFilter = normalizeSearchParam(resolvedSearchParams.partnerType);
   const tenantDetail = tenantId
-    ? await fetchJson<{ id: string; name: string; slug: string; organizations: Array<any>; memberships: Array<any> }>(`/api/tenants/${tenantId}`, accessToken)
+    ? await fetchJson<{ id: string; name: string; slug: string; organizations: Array<any>; memberships: Array<any> }>(`/api/tenants/${tenantId}`, accessToken).catch(() => null)
     : null;
   const assignments = tenantId
-    ? await fetchJson<{ items: Array<any> }>(`/api/partner-ops/assignments?tenantId=${encodeURIComponent(tenantId)}`, accessToken)
+    ? await fetchJson<{ items: Array<any> }>(`/api/partner-ops/assignments?tenantId=${encodeURIComponent(tenantId)}`, accessToken).catch(() => ({ items: [] as Array<any> }))
     : { items: [] as Array<any> };
 
   const organizations = (tenantDetail?.organizations ?? []).filter((organization) => {
