@@ -98,7 +98,16 @@ export class KeycloakJwtService {
       throw new UnauthorizedException('Authorization header must use the Bearer scheme.');
     }
 
-    const audience = this.configService.get<string>('auth.audience');
+    const audienceRaw = this.configService.get<string>('auth.audience');
+    if (this.configService.get<string>('app.env') === 'production' && !audienceRaw) {
+      throw new UnauthorizedException('KEYCLOAK_AUDIENCE is required in production.');
+    }
+    // Support comma-separated list so multiple clients (e.g. ruflo-web-ui,ruflo-admin-ui)
+    // can be accepted during the transition while the Keycloak audience mapper propagates.
+    const audienceList = audienceRaw
+      ? audienceRaw.split(',').map((a) => a.trim()).filter(Boolean)
+      : [];
+    const audience = audienceList.length === 1 ? audienceList[0] : audienceList.length > 1 ? audienceList : undefined;
     const verifyOptions = audience
       ? { issuer: this.getIssuerUrl(), audience }
       : { issuer: this.getIssuerUrl() };

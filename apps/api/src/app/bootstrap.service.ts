@@ -726,6 +726,10 @@ export class BootstrapService implements OnApplicationBootstrap {
       await this.ensureClient(internalUrl, headers, realm, adminClientId, adminClientSecret, adminAppUrl);
       await this.ensureClient(internalUrl, headers, realm, webClientId, webClientSecret, webAppUrl);
 
+      // Ensure ruflo-admin-ui tokens include ruflo-web-ui in the aud claim so the
+      // API (which validates audience=ruflo-web-ui) accepts admin panel tokens.
+      await this.ensureAudienceMapper(internalUrl, headers, realm, adminClientId, webClientId);
+
       const bootstrapAdminEmail =
         this.getConfigValue('auth.bootstrapAdminEmail', process.env.KEYCLOAK_BOOTSTRAP_ADMIN_EMAIL) ?? 'admin@ruflo.local';
       const bootstrapAdminPassword =
@@ -1277,6 +1281,51 @@ export class BootstrapService implements OnApplicationBootstrap {
       body: JSON.stringify({
         id: client.id,
         ...payload
+      })
+    });
+  }
+
+  private async ensureAudienceMapper(
+    internalUrl: string,
+    headers: Record<string, string>,
+    realm: string,
+    clientId: string,
+    audienceClientId: string
+  ) {
+    const clientsResponse = await fetch(
+      `${internalUrl}/admin/realms/${realm}/clients?clientId=${encodeURIComponent(clientId)}`,
+      { headers }
+    );
+    const clients = (await clientsResponse.json()) as Array<{ id: string }>;
+    const client = clients[0];
+
+    if (!client) {
+      return;
+    }
+
+    const mappersResponse = await fetch(
+      `${internalUrl}/admin/realms/${realm}/clients/${client.id}/protocol-mappers/models`,
+      { headers }
+    );
+    const mappers = (await mappersResponse.json()) as Array<{ name: string }>;
+    const mapperName = `${audienceClientId}-audience`;
+
+    if (mappers.some((m) => m.name === mapperName)) {
+      return;
+    }
+
+    await fetch(`${internalUrl}/admin/realms/${realm}/clients/${client.id}/protocol-mappers/models`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: mapperName,
+        protocol: 'openid-connect',
+        protocolMapper: 'oidc-audience-mapper',
+        config: {
+          'included.client.audience': audienceClientId,
+          'access.token.claim': 'true',
+          'id.token.claim': 'false'
+        }
       })
     });
   }
